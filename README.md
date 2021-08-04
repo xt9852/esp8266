@@ -1,6 +1,5 @@
 # ESP8266
-
-------
+> * 地址: https://github.com/xt9852/esp8266-test
 
 ## 软硬件环境
 > * 硬件: 使用nodeMCU模块，此模块使用的是esp12f芯片
@@ -15,7 +14,7 @@
 > * 5.解压包: tar -xf xtensa-lx106-elf-gcc8_4_0-esp-2020r3-linux-amd64.tar.gz
 > * 6.进入目录: cd xtensa-lx106-elf
 > * 7.设置参数: export PATH=$PATH:~/esp/xtensa-lx106-elf/bin
-> * 8.下载RTOS: git clone https://github.com/espressif/ESP8266_RTOS_SDK.git
+> * 8.下载RTOS: git clone https://github.com/espressif/ESP8266_RTOS_SDK.git或wget http://github.com/espressif/ESP8266_RTOS_SDK/releases/download/v3.4/ESP8266_RTOS_SDK-v3.4.zip
 > * 9.设置参数: export IDF_PATH=~/esp/ESP8266_RTOS_SDK
 
 ## 编译HelloWorld
@@ -37,7 +36,7 @@
 > * 2.错误 cc: Command not found，解决方法: apt install gcc
 > * 3.错误 flex: Command not found，解决方法: apt install flex
 > * 4.错误 curses.h: No such file or directory，解决方法: apt install libncurses5-dev
-> * 5.错误bison: Command not found，解决方法: apt install bison
+> * 5.错误 bison: Command not found，解决方法: apt install bison
 > * 6.错误 gperf: not found，解决方法: apt install gperf
 > * 7.错误 python: No such file or directory，解决方法: 如果没安装python则 apt install python3，如果已经安装python则 ln -s /usr/bin/python3.8 /usr/bin/python(需要修改版本号)
 > * 8.错误 The following Python requirements are not satisfied，解决方法: /usr/bin/python -m pip install --user -r /root/esp/ESP8266_RTOS_SDK/requirements.txt
