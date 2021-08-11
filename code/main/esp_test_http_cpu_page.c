@@ -7,16 +7,16 @@
 #define HTTP_FILE_CPU "<meta http-equiv='Content-Type' content='charset=utf-8'/>"\
 "<style>"\
     "div{margin:0 0 5;padding:0 19;background:green;float:left;}"\
-    ".k{margin:3 9;width:26;border-radius:50%;float:left;background:gray;cursor:pointer;}"\
+    ".k{margin:3 9;width:26;border-radius:50%;float:left;background:#ccc;cursor:pointer;}"\
     ".p{margin:3;width:26;border-radius:50%;float:left;}"\
     ".t{margin:3;border-left:13px solid transparent;border-right:13px solid transparent;border-bottom:13px solid #ccc;float:left;}"\
     ".b{margin:3;border-left:13px solid transparent;border-right:13px solid transparent;border-top:13px solid #ccc;float:left;}"\
 "</style>"\
 "<script>"\
-    "function load()"\
+    "function load(url)"\
     "{"\
         "req=new XMLHttpRequest();"\
-        "req.open('GET', '/cpu-data');"\
+        "req.open('GET', url);"\
         "req.send(null);"\
         "req.onload=function()"\
         "{"\
@@ -109,8 +109,21 @@
             "document.getElementById('rt_b').style.borderColor=tbc[rp['rt']];;"\
         "}"\
     "}"\
+    "function on_clk(item)"\
+    "{"\
+        "if (item.style.background=='red')"\
+        "{"\
+            "item.style.background='#ccc';"\
+            "load('/cpu-data?clk=0');"\
+        "}"\
+        "else"\
+        "{"\
+            "item.style.background='red';"\
+            "load('/cpu-data?clk=1');"\
+        "}"\
+    "}"\
 "</script>"\
-"<body onload='load()'>"\
+"<body onload=\"load('/cpu-data?clk=0')\">"\
     "<div>"\
         "<h3 id='mi_addr'/>"\
         "<h3 id='mi_next'/>"\
@@ -130,9 +143,9 @@
         "<h3 id='chk_jbe' class='p'>jbe</h3>"\
         "<h3 id='chk_jl'  class='p'>jl</h3>"\
         "<h3 id='chk_jle' class='p'>jle</h3>"\
-        "<h3 id='int0'    class='k'>int0</h3>"\
-        "<h3 id='int1'    class='k'>int1</h3>"\
-        "<h3 id='clk'     class='k'>clk</h3>"\
+        "<h3 id='int0' class='k' onclick='on_int()'>int0</h3>"\
+        "<h3 id='int1' class='k' onclick='on_int()'>int1</h3>"\
+        "<h3 id='clk' class='k' onclick='on_clk(this)'>clk</h3>"\
     "</div>"\
     "<div style='clear:left;margin:0'>"\
         "<h3 id='ri_t' class='t'></h3>"\
@@ -177,110 +190,6 @@
         "<h3 id='rt_b' class='b'></h3>"\
     "</div>"\
 "</body>"
-
-/*
-"txt=['SEL0选取下一条地址为微指令地址',"\
-     "'SEL1选取0x[IR]0组成微指令地址',"\
-     "'SEL2选取中断微指令地址0x011',"\
-     "'SEL3选取条件跳转微指令地址0x000'];"\
-
-function set(name, data, node){\
-s = '';\
-k = new Array();\
-c = document.getElementById('c');\
-a = document.getElementById(node);\
-n = document.getElementById(name + 'n');\
-b = c.parentNode;\
-for (var key in data)\
-{\
-k.push(key);\
-s += data[key];\
-}\
-if (n)\
-{\
-    for (i = 0; i < s.length; i += 4)\
-    {\
-        n.innerText += hex[s.substring(i, i + 4)];\
-    }\
-    n.innerText += 'H';\
-}\
-else\
-{\
-    k.sort();\
-}\
-for (var i in k)\
-{\
-    id = k[i];\
-    t = c.cloneNode(true);\
-    t.id = name + i;\
-    t.innerText = id;\
-    t.style.float = 'left';\
-    t.style.width = '22px';\
-    t.style.height = '22px';\
-    t.style['margin-left'] = '5px';\
-    t.style['border-radius'] = '50%';\
-    t.style['text-align'] = 'center';\
-    t.style.background = (data[id] == 1 ? 'red' : 'gray');\
-    b.insertBefore(t, a);\
-}\
-}\
-
-var hex = {'0000':'0','0001':'1','0010':'2','0011':'3','0100':'4','0101':'5','0110':'6','0111':'7',\
-'1000':'8','1001':'9','1010':'A','1011':'B','1100':'C','1101':'D','1110':'E','1111':'F'}\
-
-request = new XMLHttpRequest()\
-request.open('GET', '/cpu')\
-request.send(null)\
-request.onload = function(){\
-if (request.readyState != 4 || request.status != 200){console.log(request.status);return;}\
-r = JSON.parse(request.responseText)\
-set('db',  r.db,  'ab');\
-set('ab',  r.ab,  'fb');\
-set('fb',  r.fb,  'sb');\
-set('sb',  r.sb,  'tb');\
-<d id='c'></d>\
-<d id='db'  class='t0'>数据总线:</d><d id='dbn' class='nm'>0x0123</d>\
-<d id='ab'  class='t0'>地址总线:</d><d id='abn' class='nm'>0x4567</d>\
-<d id='fb'  class='t0'>ALU输出: </d><d id='fbn' class='nm'>0x89AB</d>\
-<d id='sb'  class='t0'>移位输出:</d><d id='sbn' class='nm'>0xCDEF</d>\
-
-
-set('tb',  r.tb,  'ib');\
-set('ib',  r.ib,  'mb');\
-set('mb',  r.mb,  'mia');\
-set('mia', r.mia, 'min');\
-set('min', r.min, 'sel');\
-set('sel', r.sel, 'ir');\
-set('ir',  r.ir,  'msw');\
-set('msw', r.msw, 'ip');\
-set('ip',  r.ip,  'sp');\
-set('sp',  r.sp,  'ar');\
-set('ar',  r.ar,  'br');\
-set('br',  r.br,  'tr');\
-set('tr',  r.tr,  'alu');\
-set('alu', r.alu, 'mem');\
-set('mem', r.mem, 'jne');\
-set('jne', r.jne, 'jmp');\
-set('jmp', r.jmp, 'ses');\
-set('ses', r.ses, 'clk');\
-set('clk', r.clk, 'int');\
-set('int', r.int, 'end');\
-<d id='tb'  class='t0'>临时总线:</d><d id='tbn' class='nm'></d>\
-<d id='ib'  class='t0'>指令总线:</d><d id='ibn' class='nm'></d>\
-<d id='mb'  class='t0'>内存数据:</d><d id='mbn' class='nm'></d>\
-<d id='mia' class='t0'>当前地址:</d><d id='mian'class='nm'></d>\
-<d id='min' class='t0'>下条地址:</d><d id='minn'class='nm'></d>\
-<d id='sel' class='t1'>微指令SEL</d><d id='ir'  class='t1'>微指令IR</d>\
-<d id='msw' class='t1'>微指令MSW</d><d id='ip'  class='t1'>微指令IP</d>\
-<d id='sp'  class='t1'>微指令SP</d><d id='ar'  class='t1'>微指令AR</d>\
-<d id='br'  class='t1'>微指令BR</d><d id='tr'  class='t1'>微指令TR</d>\
-<d id='alu' class='t1'>微指令ALU</d><d id='mem' class='t1'>微指令MEM</d>\
-<d id='jne' class='t1'>ALU不等信号</d><d id='jmp' class='t1'>跳转信号</d>\
-<d id='ses' class='t1'>选择器信号</d><d id='clk' class='t1'>心跳信号</d>\
-<d id='int' class='t1'>中断信号</d>\
-
-*/
-
 
 /**
  * \brief      cpu页面

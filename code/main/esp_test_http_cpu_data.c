@@ -8,12 +8,29 @@
 
 /**
  * \brief      CPU页面数据
- * \param[out] char *content        数据体
- * \param[out] uint *content_len    数据体长度
+ * \param[in]  const char   *param          URL请求参数
+ * \param[out] char         *content        数据体
+ * \param[out] uint         *content_len    数据体长度
  * \return     0-成功，其它失败
  */
-int http_cpu_data(char *content, uint *content_len)
+int http_cpu_data(const char *param, char *content, uint *content_len)
 {
+    uint clk;
+    char format[64];
+
+    sprintf(format, "%s=%%d", CPU_CLK_NAME);
+
+    ESP_LOGI(TAG, "format:%s", format);
+
+    if (param == NULL || 1 != sscanf(param, format, &clk))
+    {
+        *content_len = snprintf(content, *content_len, "arg %s error", CPU_CLK_NAME);
+        ESP_LOGE(TAG, content);
+        return 400;
+    }
+
+    gpio_cpu_set_clk(clk);
+
     gpio_cpu_load_data(); // 载入数据
 
     uint mi_addr_curr = gpio_cpu_get_data(12);
@@ -33,8 +50,8 @@ int http_cpu_data(char *content, uint *content_len)
     uint chk_jl       = gpio_cpu_get_data(1);
     uint chk_jle      = gpio_cpu_get_data(1);
 
-    uint ri           = 0;//gpio_cpu_get_data(2);
-    uint rf           = 2;//gpio_cpu_get_data(3);
+    uint ri           = rand()%4;//gpio_cpu_get_data(2);
+    uint rf           = rand()%4;//gpio_cpu_get_data(3);
     uint sc           = 0;//gpio_cpu_get_data(3);
     uint sd           = 1;//gpio_cpu_get_data(3);
     uint ss           = 2;//gpio_cpu_get_data(3);
@@ -43,8 +60,8 @@ int http_cpu_data(char *content, uint *content_len)
     uint ra           = 5;//gpio_cpu_get_data(3);
     uint rb           = 6;//gpio_cpu_get_data(3);
     uint rc           = 7;//gpio_cpu_get_data(3);
-    uint rd           = 0;//gpio_cpu_get_data(3);
-    uint rt           = 3;//gpio_cpu_get_data(2);
+    uint rd           = rand()%4;//gpio_cpu_get_data(3);
+    uint rt           = rand()%4;//gpio_cpu_get_data(2);
 
     int len;
 

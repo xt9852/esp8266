@@ -25,3 +25,10 @@ void gpio_cpu_load_data();
  * \return     数据
  */
 uint gpio_cpu_get_data(uint count);
+
+/**
+ * \brief      输出心跳
+ * \param[in]  uint clk   心跳
+ * \return     无
+ */
+void gpio_cpu_set_clk(uint clk);

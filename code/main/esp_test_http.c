@@ -11,12 +11,10 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_test_http.h"
-#include "esp_test_http_index_page.h"
-#include "esp_test_http_index_data.h"
-#include "esp_test_http_cfg_page.h"
-#include "esp_test_http_cfg_data.h"
 #include "esp_test_http_cpu_page.h"
 #include "esp_test_http_cpu_data.h"
+#include "esp_test_http_cfg_page.h"
+#include "esp_test_http_cfg_data.h"
 
 #define NETWORK_IPV4
 #define HTTP_HEAD_200   "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: "
@@ -112,6 +110,37 @@ int http_create_listen_socket(uint port)
 }
 
 /**
+ * \brief      得到URI中的参数,/cpu-data?clk=1 HTTP/1.1
+ * \param[in]  char *uri    URI地址
+  * \return    char* URI中参数指针
+ */
+char* http_get_arg(char *uri)
+{
+    char *ch = strchr(uri, ' ');
+
+    if (NULL == ch)
+    {
+        ESP_LOGI(TAG, "request uri:%s error", uri);
+        return NULL;
+    }
+
+    *ch = '\0';
+
+    ESP_LOGI(TAG, "uri:%s", uri);
+
+    ch = strchr(uri, '?');
+
+    if (NULL != ch)
+    {
+        *ch++ = '\0';
+        ESP_LOGI(TAG, "arg:%s", ch);
+        return ch;
+    }
+    
+    return NULL;
+}
+
+/**
  * \brief      处理客户端的请求
  * \param[in]  int client_sock   客户端socket
  * \return     0-成功，其它失败
@@ -138,49 +167,27 @@ int http_process_client_request(int client_sock)
 
         s_buff[data_len] = 0;
 
-        if (s_buff[0] != 'G' || s_buff[1] != 'E' || s_buff[2] != 'T' || s_buff[3] != ' ')
+        if (0 != strncmp(s_buff, "GET ", 4))
         {
-            ESP_LOGI(TAG, "Request is not GET");
+            ESP_LOGI(TAG, "request is not GET");
             return 1;
         }
 
         ESP_LOGI(TAG, "\n%s", s_buff);
 
-        char *uri = strchr(&s_buff[4], ' ');
-
-        if (NULL == uri)
-        {
-            ESP_LOGI(TAG, "Request uri error");
-            return 2;
-        }
-
-        *uri = '\0';
-        uri = &s_buff[4];
-        ESP_LOGI(TAG, "URI:%s", uri);
-
-        char *param = strchr(uri, '?');
-
-        if (NULL != param)
-        {
-            *param++ = '\0';
-            ESP_LOGI(TAG, "arg:%s", param);
-        }
-
         int ret = 404;
+        char *uri = &s_buff[4];
+        char *arg = http_get_arg(uri);
         char *content = s_buff;
         uint content_len = s_size;
 
         if (0 == strcmp(uri, "/"))
         {
-            ret = http_index_page(content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/index.json"))
-        {
-            ret = http_index_data(content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/cpu.html"))
-        {
             ret = http_cpu_page(content, &content_len);
+        }
+        else if (0 == strcmp(uri, "/cpu-data"))
+        {
+            ret = http_cpu_data(arg, content, &content_len);
         }
         else if (0 == strcmp(uri, "/cfg.html"))
         {
@@ -188,23 +195,19 @@ int http_process_client_request(int client_sock)
         }
         else if (0 == strcmp(uri, "/cfg-http"))
         {
-            ret = http_cfg_http(param, s_http, content, &content_len);
+            ret = http_cfg_http(arg, s_http, content, &content_len);
         }
         else if (0 == strcmp(uri, "/cfg-wifi"))
         {
-            ret = http_cfg_wifi(param, s_wifi, content, &content_len);
+            ret = http_cfg_wifi(arg, s_wifi, content, &content_len);
         }
         else if (0 == strcmp(uri, "/cfg-light"))
         {
-            ret = http_cfg_light(param, s_light, content, &content_len);
+            ret = http_cfg_light(arg, s_light, content, &content_len);
         }
         else if (0 == strcmp(uri, "/reboot"))
         {
             ret = http_reboot(content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/cpu-data"))
-        {
-            ret = http_cpu_data(content, &content_len);
         }
 
         char *head;

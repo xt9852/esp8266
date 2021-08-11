@@ -13,19 +13,19 @@
 
 /**
  * \brief      配置http
- * \param[in]  char         *param          URL请求参数
+ * \param[in]  const char   *param          URL请求参数
  * \param[in]  p_config_http http           配置数据
  * \param[out] char         *content        数据体
  * \param[out] uint         *content_len    数据体长度
  * \return     200-成功，其它失败
  */
-int http_cfg_http(char *param, p_config_http http, char *content, uint *content_len)
+int http_cfg_http(const char *param, p_config_http http, char *content, uint *content_len)
 {
     char format[64];
 
     sprintf(format, "%s=%%d", CONFIG_HTTP_PORT);
 
-    if (1 == sscanf(param, format, &(http->port))) // 函数将返回成功赋值的字段个数
+    if (param != NULL && 1 == sscanf(param, format, &(http->port))) // 函数将返回成功赋值的字段个数
     {
         config_put_http(http);
 
@@ -41,13 +41,13 @@ int http_cfg_http(char *param, p_config_http http, char *content, uint *content_
 
 /**
  * \brief      配置wifi
- * \param[in]  char         *param          URL请求参数
+ * \param[in]  const char   *param          URL请求参数
  * \param[in]  p_config_wifi wifi           配置数据
  * \param[out] char         *content        数据体
  * \param[out] uint         *content_len    数据体长度
  * \return     200-成功，其它失败
  */
-int http_cfg_wifi(char *param, p_config_wifi wifi, char *content, uint *content_len)
+int http_cfg_wifi(const char *param, p_config_wifi wifi, char *content, uint *content_len)
 {
     uint type;
     char ssid[32];
@@ -61,7 +61,7 @@ int http_cfg_wifi(char *param, p_config_wifi wifi, char *content, uint *content_
                      CONFIG_WIFI_SSID,
                      CONFIG_WIFI_PASSWORD);
 
-    if (3 == sscanf(param, format, &type, ssid, password))
+    if (param != NULL && 3 == sscanf(param, format, &type, ssid, password))
     {
         if ((type == WIFI_TYPE_AP || type == WIFI_TYPE_STA) &&
             (0 != strcmp(ssid, "")) &&
@@ -161,15 +161,13 @@ int http_cfg_light_add(p_config_light light, uint id, char *name, uint color, bo
 
 /**
  * \brief      删除light
- * \param[in]  char          *param          URL请求参数
  * \param[in]  p_config_light light          配置数据
  * \param[in]  uint           id             ID
  * \param[out] char          *content        数据体
  * \param[out] uint          *content_len    数据体长度
  * \return     200-成功，其它失败
  */
-int http_cfg_light_del(p_config_light light, uint id,
-                       char *content, uint *content_len)
+int http_cfg_light_del(p_config_light light, uint id, char *content, uint *content_len)
 {
     int i;
     int count = light->count;
@@ -214,7 +212,6 @@ int http_cfg_light_del(p_config_light light, uint id,
 
 /**
  * \brief      修改light
- * \param[in]  char          *param          URL请求参数
  * \param[in]  p_config_light light          配置数据
  * \param[in]  uint           id             ID
  * \param[in]  char          *name           名称
@@ -274,13 +271,13 @@ int http_cfg_light_mod(p_config_light light, uint id, char *name, uint color, bo
 
 /**
  * \brief      配置light
- * \param[in]  char          *param         URL请求参数
+ * \param[in]  const char    *param         URL请求参数
  * \param[in]  p_config_light light         配置数据
  * \param[out] char          *content       数据体
  * \param[out] uint          *content_len   数据体长度
  * \return     200-成功，其它失败
  */
-int http_cfg_light(char *param, p_config_light light, char *content, uint *content_len)
+int http_cfg_light(const char *param, p_config_light light, char *content, uint *content_len)
 {
     uint id;
     bool on;
@@ -296,7 +293,7 @@ int http_cfg_light(char *param, p_config_light light, char *content, uint *conte
                      CONFIG_LIGHT_COLOR,
                      CONFIG_LIGHT_ON);
 
-    if (5 == sscanf(param, format, &cmd, &id, name, &color, &on))
+    if (param != NULL && 5 == sscanf(param, format, &cmd, &id, name, &color, &on))
     {
         ESP_LOGI(TAG, "%s:%d %s:%d %s:%s %s:%d %s:%d",
                        LIGHT_CMD_NAME, cmd,
@@ -333,19 +330,6 @@ int http_cfg_light(char *param, p_config_light light, char *content, uint *conte
 
     ESP_LOGE(TAG, content);
     return 400;
-}
-
-/**
- * \brief      配置light.on
- * \param[in]  char          *param         请求参数
- * \param[in]  p_config_light light         配置数据
- * \param[out] char          *content       数据体
- * \param[out] uint          *content_len   数据体长度
- * \return     0-成功，其它失败
- */
-int http_cfg_light_on(char *param, p_config_light light, char *content, uint *content_len)
-{
-    return 0;
 }
 
 /**

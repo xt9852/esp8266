@@ -53,6 +53,8 @@
 
 #define LIGHT_MAX_COUNT         16
 
+#define CPU_CLK_NAME            "clk"
+
 typedef struct _config_http
 {
     uint port;
