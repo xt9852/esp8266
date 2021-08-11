@@ -4,8 +4,8 @@
 #include "esp_log.h"
 #include "esp_test_http_index_page.h"
 
-#define HTTP_FILE_INDEX "<meta http-equiv='Content-Type' content='charset=utf-8'/>\
-<style>div{margin:5;padding:0 20;background:green;float:left;}</style>"\
+#define HTTP_FILE_INDEX "<meta http-equiv='Content-Type' content='charset=utf-8'/>"\
+"<style>div{margin:5;padding:0 20;background:green;float:left;}</style>"\
 "<body onload='load()'>"\
     "<div>"\
         "<h3 id='t3'/>"\

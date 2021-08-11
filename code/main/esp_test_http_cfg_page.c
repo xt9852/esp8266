@@ -5,7 +5,6 @@
 #include "esp_test_cfg.h"
 #include "esp_test_http_cfg_page.h"
 
-
 #define HTTP_FILE_CONFIG "<form action='/reboot'><input type='submit' value='reboot'/></form>"\
 "<form action='/cfg-http'>"\
     "<input name='" CONFIG_HTTP_PORT "' value='80' maxlength='5' oninput=\"value=value.replace(/[^\\d]/g,'')\"/>"\

@@ -51,6 +51,7 @@
 #define LIGHT_ON_ON_NAME        "on"
 #define LIGHT_ON_OFF_NAME       "off"
 
+#define LIGHT_MAX_COUNT         16
 
 typedef struct _config_http
 {
@@ -66,23 +67,34 @@ typedef struct _config_wifi
 
 }config_wifi_t, *p_config_wifi;
 
+typedef struct _config_light_item
+{
+    bool on;            // 是否开灯
+    uint id;            // ID应唯一
+    uint color;         // 颜色:0-red,1-green,2-blue,3-yellow
+    char name[32];      // 名称
+
+}config_light_item_t, *p_config_light_item;
+
 typedef struct _config_light
 {
-    bool on;            // 是否光灯
-    uint id;            // 应唯一
-    uint color;         // 0-red,1-green,2-blue,3-yellow
-    char name[32];
+    uint max;           // 最大数量
+    uint count;         // 节点数量
+    config_light_item_t item[LIGHT_MAX_COUNT];
 
 }config_light_t, *p_config_light;
 
 
 /**
  * \brief      初始化配置
- * \param[in]  char *buff     缓存
- * \param[in]  uint buff_size 缓存大小
+ * \param[in]  char *buff       缓存
+ * \param[in]  uint size        缓存大小
+ * \param[out] p_config_http    http
+ * \param[out] p_config_wifi    wifi
+ * \param[out] p_config_light   light
  * \return     int 0-成功，其它失败
  */
-int config_init(char *buff, uint buff_size);
+int config_init(char *buff, uint size, p_config_http http, p_config_wifi wifi, p_config_light light);
 
 int config_http_get_data(const char *json, p_config_http http);
 
@@ -92,15 +104,15 @@ int config_wifi_get_data(const char *json, p_config_wifi wifi);
 
 int config_wifi_get_json(const p_config_wifi wifi, char *json);
 
-int config_light_get_data(const char *json, uint max, p_config_light light, uint *count);
+int config_light_get_data(const char *json, p_config_light light);
 
-int config_light_get_json(const p_config_light light, uint count, char *json);
+int config_light_get_json(const p_config_light light, char *json);
 
-int config_get_data(p_config_http http, p_config_wifi wifi, p_config_light light, uint light_max, uint *light_count);
+int config_get_data(p_config_http http, p_config_wifi wifi, p_config_light light);
 
 int config_put_http(p_config_http http);
 
 int config_put_wifi(p_config_wifi wifi);
 
-int config_put_light(p_config_light light, uint light_count);
+int config_put_light(p_config_light light);
 

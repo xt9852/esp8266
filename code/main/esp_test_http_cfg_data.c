@@ -13,7 +13,7 @@
 
 /**
  * \brief      配置http
- * \param[in]  char         *param          请求参数
+ * \param[in]  char         *param          URL请求参数
  * \param[in]  p_config_http http           配置数据
  * \param[out] char         *content        数据体
  * \param[out] uint         *content_len    数据体长度
@@ -41,7 +41,7 @@ int http_cfg_http(char *param, p_config_http http, char *content, uint *content_
 
 /**
  * \brief      配置wifi
- * \param[in]  char         *param          请求参数
+ * \param[in]  char         *param          URL请求参数
  * \param[in]  p_config_wifi wifi           配置数据
  * \param[out] char         *content        数据体
  * \param[out] uint         *content_len    数据体长度
@@ -89,24 +89,34 @@ int http_cfg_wifi(char *param, p_config_wifi wifi, char *content, uint *content_
     return 400;
 }
 
-int http_cfg_light_add(p_config_light light, uint *light_count, uint light_max,
-                       uint id, char *name, uint color, bool on,
+/**
+ * \brief      添加light
+ * \param[in]  p_config_light light          配置数据
+ * \param[in]  uint           id             ID
+ * \param[in]  char          *name           名称
+ * \param[in]  uint           color          颜色
+ * \param[in]  bool           on             是否打开
+ * \param[out] char          *content        数据体
+ * \param[out] uint          *content_len    数据体长度
+ * \return     200-成功，其它失败
+ */
+int http_cfg_light_add(p_config_light light, uint id, char *name, uint color, bool on,
                        char *content, uint *content_len)
 {
     int i;
-    int count = *light_count;
+    int count = light->count;
     bool have = false;
 
-    if (count >= light_max)
+    if (count >= light->max)
     {
-        *content_len = snprintf(content, *content_len, "light count >= max:%d", light_max);
+        *content_len = snprintf(content, *content_len, "light count >= max:%d", light->max);
         ESP_LOGE(TAG, content);
         return 400;
     }
 
     for (i = 0; i < count; i++)
     {
-        if (light[i].id == id)
+        if (light->item[i].id == id)
         {
             have = true;
             break;
@@ -120,25 +130,27 @@ int http_cfg_light_add(p_config_light light, uint *light_count, uint light_max,
         return 400;
     }
 
-    light[count].id    = id;
-    light[count].on    = on;
-    light[count].color = color;
-    strcpy(light[count].name, name);
-    *light_count = count + 1;
+    p_config_light_item item = &(light->item[count]);
+    item->id    = id;
+    item->on    = on;
+    item->color = color;
+    strcpy(item->name, name);
+    light->count++;
 
     ESP_LOGE(TAG, "--------1----------");
 
-    for (i = 0; i < *light_count; i++)
+    for (i = 0; i < light->count; i++)
     {
+        item = &(light->item[i]);
         ESP_LOGE(TAG, "%s id:%d name:%s color:%d on:%d",
                       __FUNCTION__,
-                      light[i].id,
-                      light[i].name,
-                      light[i].color,
-                      light[i].on);
+                      item->id,
+                      item->name,
+                      item->color,
+                      item->on);
     }
 
-    config_put_light(light, *light_count);
+    config_put_light(light);
 
     ESP_LOGE(TAG, "--------2----------");
 
@@ -149,33 +161,31 @@ int http_cfg_light_add(p_config_light light, uint *light_count, uint light_max,
 
 /**
  * \brief      删除light
- * \param[in]  char          *param          请求参数
+ * \param[in]  char          *param          URL请求参数
  * \param[in]  p_config_light light          配置数据
- * \param[in]  uint          *light_count    配置数据数量
  * \param[in]  uint           id             ID
  * \param[out] char          *content        数据体
  * \param[out] uint          *content_len    数据体长度
  * \return     200-成功，其它失败
  */
-int http_cfg_light_del(p_config_light light, uint *light_count, uint id,
+int http_cfg_light_del(p_config_light light, uint id,
                        char *content, uint *content_len)
 {
     int i;
-    int count = *light_count;
+    int count = light->count;
     bool have = false;
 
     for (i = 0; i < count; i++)
     {
-        if (!have && light[i].id == id)
+        if (!have && light->item[i].id == id)
         {
             have = true;
-            ESP_LOGE(TAG, "%s count:%d", __FUNCTION__, *light_count);
-            (*light_count)--;
-            ESP_LOGE(TAG, "%s count:%d", __FUNCTION__, *light_count);
+            light->count--;
+            ESP_LOGE(TAG, "%s del light id:%d", __FUNCTION__, id);
         }
         else if (have)
         {
-            light[i - 1] = light[i];
+            light->item[i - 1] = light->item[i];
         }
     }
 
@@ -188,12 +198,12 @@ int http_cfg_light_del(p_config_light light, uint *light_count, uint id,
 
     ESP_LOGE(TAG, "--------1----------");
 
-    for (i = 0; i < *light_count; i++)
+    for (i = 0; i < light->count; i++)
     {
-        ESP_LOGE(TAG, "%s id:%d", __FUNCTION__, light[i].id);
+        ESP_LOGE(TAG, "%s id:%d", __FUNCTION__, light->item[i].id);
     }
 
-    config_put_light(light, *light_count);
+    config_put_light(light);
 
     ESP_LOGE(TAG, "--------2----------");
 
@@ -204,25 +214,26 @@ int http_cfg_light_del(p_config_light light, uint *light_count, uint id,
 
 /**
  * \brief      修改light
- * \param[in]  char          *param          请求参数
+ * \param[in]  char          *param          URL请求参数
  * \param[in]  p_config_light light          配置数据
- * \param[in]  uint          *light_count    配置数据数量
  * \param[in]  uint           id             ID
+ * \param[in]  char          *name           名称
+ * \param[in]  uint           color          颜色
+ * \param[in]  bool           on             是否打开
  * \param[out] char          *content        数据体
  * \param[out] uint          *content_len    数据体长度
  * \return     200-成功，其它失败
  */
-int http_cfg_light_mod(p_config_light light, uint *light_count,
-                       uint id, char *name, uint color, bool on,
+int http_cfg_light_mod(p_config_light light, uint id, char *name, uint color, bool on,
                        char *content, uint *content_len)
 {
     int i;
-    int count = *light_count;
+    int count = light->count;
     bool have = false;
 
     for (i = 0; i < count; i++)
     {
-        if (light[i].id == id)
+        if (light->item[i].id == id)
         {
             have = true;
             break;
@@ -236,9 +247,9 @@ int http_cfg_light_mod(p_config_light light, uint *light_count,
         return 400;
     }
 
-    light[i].on    = on;
-    light[i].color = color;
-    strcpy(light[i].name, name);
+    light->item[i].on    = on;
+    light->item[i].color = color;
+    strcpy(light->item[i].name, name);
 
     ESP_LOGE(TAG, "--------1----------");
 
@@ -246,13 +257,13 @@ int http_cfg_light_mod(p_config_light light, uint *light_count,
     {
         ESP_LOGE(TAG, "%s id:%d name:%s color:%d on:%d",
                       __FUNCTION__,
-                      light[i].id,
-                      light[i].name,
-                      light[i].color,
-                      light[i].on);
+                      light->item[i].id,
+                      light->item[i].name,
+                      light->item[i].color,
+                      light->item[i].on);
     }
 
-    config_put_light(light, *light_count);
+    config_put_light(light);
 
     ESP_LOGE(TAG, "--------2----------");
 
@@ -263,15 +274,13 @@ int http_cfg_light_mod(p_config_light light, uint *light_count,
 
 /**
  * \brief      配置light
- * \param[in]  char          *param         请求参数
+ * \param[in]  char          *param         URL请求参数
  * \param[in]  p_config_light light         配置数据
- * \param[in]  uint          *light_count   配置数据长度
- * \param[in]  uint           light_max     配置数据最大长度
  * \param[out] char          *content       数据体
  * \param[out] uint          *content_len   数据体长度
  * \return     200-成功，其它失败
  */
-int http_cfg_light(char *param, p_config_light light, uint *light_count, uint light_max, char *content, uint *content_len)
+int http_cfg_light(char *param, p_config_light light, char *content, uint *content_len)
 {
     uint id;
     bool on;
@@ -300,15 +309,15 @@ int http_cfg_light(char *param, p_config_light light, uint *light_count, uint li
         {
             case LIGHT_CMD_ADD:
             {
-                return http_cfg_light_add(light, light_count, light_max, id, name, color, on, content, content_len);
+                return http_cfg_light_add(light, id, name, color, on, content, content_len);
             }
             case LIGHT_CMD_DEL:
             {
-                return http_cfg_light_del(light, light_count, id, content, content_len);
+                return http_cfg_light_del(light, id, content, content_len);
             }
             case LIGHT_CMD_MOD:
             {
-                return http_cfg_light_mod(light, light_count, id, name, color, on, content, content_len);
+                return http_cfg_light_mod(light, id, name, color, on, content, content_len);
             }
         }
     }
@@ -347,7 +356,7 @@ int http_cfg_light_on(char *param, p_config_light light, char *content, uint *co
 static void restart_task(void *pvParameters)
 {
     vTaskDelay(2000 / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "-------------------2000ms--%s---------------------", __FUNCTION__);
+    ESP_LOGI(TAG, "------------------2000ms--restart----------");
     esp_restart();
 }
 
@@ -362,6 +371,6 @@ int http_reboot(char *content, uint *content_len)
     xTaskCreate(restart_task, "restart_task", 4096, NULL, 5, NULL);
     strncpy(content, HTTP_CONTENT_200, *content_len);
     *content_len = sizeof(HTTP_CONTENT_200) - 1;
-    ESP_LOGI(TAG, "------------------reboot------------------");
+    ESP_LOGI(TAG, "------------------send reboot cmd----------");
     return 200;
 }

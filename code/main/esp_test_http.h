@@ -4,18 +4,14 @@
 
 /**
  * \brief      初始化http
+ * \param[in]  char          *buff      缓存
+ * \param[in]  uint           size      缓存大小
  * \param[in]  p_config_http  http
  * \param[in]  p_config_wifi  wifi
  * \param[in]  p_config_light light
- * \param[in]  uint          *light_count
- * \param[in]  uint           light_max
- * \param[in]  char          *buff          缓存
- * \param[in]  uint           buff_size     缓存大小
  * \return     0-成功，其它失败
  */
-int http_init(p_config_http http, p_config_wifi wifi, 
-              p_config_light light, uint *light_count, uint light_max,
-              char *buff, uint buff_size);
+int http_init(char *buff, uint size, p_config_http http, p_config_wifi wifi, p_config_light light);
 
 /**
  * \brief      创建监听socket

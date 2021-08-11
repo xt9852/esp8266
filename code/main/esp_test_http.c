@@ -15,6 +15,8 @@
 #include "esp_test_http_index_data.h"
 #include "esp_test_http_cfg_page.h"
 #include "esp_test_http_cfg_data.h"
+#include "esp_test_http_cpu_page.h"
+#include "esp_test_http_cpu_data.h"
 
 #define NETWORK_IPV4
 #define HTTP_HEAD_200   "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: "
@@ -22,14 +24,29 @@
 #define HTTP_HEAD_404   "HTTP/1.1 404 Not Found\nContent-Type: text/html\nContent-Length: "
 #define HTTP_FILE_404   "404"
 
+static char          *s_buff;
+static uint           s_size;
 static p_config_http  s_http;
 static p_config_wifi  s_wifi;
 static p_config_light s_light;
-static uint          *s_light_count;
-static uint           s_light_max;
-static uint           s_buff_size;
-static char          *s_buff;
 
+/**
+ * \brief      任务回调函数
+ * \param[in]  void* pvParameters  参数
+ * \return     无
+ */
+static void http_client_task(void *pvParameters)
+{
+    int client_sock = (int)pvParameters;
+
+    while (http_process_client_request(client_sock) >= 0);
+
+    ESP_LOGI(TAG, "Shutting down client socket %d", client_sock);
+    shutdown(client_sock, 0);
+    close(client_sock);
+
+    vTaskDelete(NULL);
+}
 
 /**
  * \brief      创建监听socket
@@ -101,9 +118,9 @@ int http_create_listen_socket(uint port)
  */
 int http_process_client_request(int client_sock)
 {
-    ESP_LOGI(TAG, "%s beg", __FUNCTION__);
+    ESP_LOGI(TAG, "--------------------%s--beg----", __FUNCTION__);
 
-    int data_len = recv(client_sock, s_buff, s_buff_size, 0);
+    int data_len = recv(client_sock, s_buff, s_size, 0);
 
     if (data_len < 0)
     {
@@ -117,7 +134,7 @@ int http_process_client_request(int client_sock)
     }
     else
     {
-        ESP_LOGI(TAG, "Recv data len:%d", data_len);
+        ESP_LOGI(TAG, "sock %d Recv data len:%d", client_sock, data_len);
 
         s_buff[data_len] = 0;
 
@@ -151,7 +168,7 @@ int http_process_client_request(int client_sock)
 
         int ret = 404;
         char *content = s_buff;
-        uint content_len = s_buff_size;
+        uint content_len = s_size;
 
         if (0 == strcmp(uri, "/"))
         {
@@ -160,6 +177,10 @@ int http_process_client_request(int client_sock)
         else if (0 == strcmp(uri, "/index.json"))
         {
             ret = http_index_data(content, &content_len);
+        }
+        else if (0 == strcmp(uri, "/cpu.html"))
+        {
+            ret = http_cpu_page(content, &content_len);
         }
         else if (0 == strcmp(uri, "/cfg.html"))
         {
@@ -175,11 +196,15 @@ int http_process_client_request(int client_sock)
         }
         else if (0 == strcmp(uri, "/cfg-light"))
         {
-            ret = http_cfg_light(param, s_light, s_light_count, s_light_max, content, &content_len);
+            ret = http_cfg_light(param, s_light, content, &content_len);
         }
         else if (0 == strcmp(uri, "/reboot"))
         {
             ret = http_reboot(content, &content_len);
+        }
+        else if (0 == strcmp(uri, "/cpu-data"))
+        {
+            ret = http_cpu_data(content, &content_len);
         }
 
         char *head;
@@ -220,7 +245,7 @@ int http_process_client_request(int client_sock)
         ESP_LOGI(TAG, "\n%s%s", head, content_len_str);
     }
 
-    ESP_LOGI(TAG, "%s end", __FUNCTION__);
+    ESP_LOGI(TAG, "--------------------%s--end----", __FUNCTION__);
     return 0;
 }
 
@@ -261,19 +286,8 @@ int http_process_client_connect(int listen_sock)
     }
 #endif
 
-    do
-    {
-        ESP_LOGI(TAG, "Accepted client socket:%d addr:%s", client_sock, addr_str);
-    }
-    while (http_process_client_request(client_sock) >= 0);
-
-    if (client_sock != -1)
-    {
-        ESP_LOGE(TAG, "Shutting down client socket");
-        shutdown(client_sock, 0);
-        close(client_sock);
-    }
-
+    ESP_LOGI(TAG, "Accepted client socket:%d addr:%s", client_sock, addr_str);
+    xTaskCreate(http_client_task, "http_client", 4096, (void*)client_sock, 5, NULL);
     return 0;
 }
 
@@ -304,26 +318,20 @@ static void http_server_task(void *pvParameters)
 
 /**
  * \brief      初始化http
+ * \param[in]  char          *buff      缓存
+ * \param[in]  uint           size      缓存大小
  * \param[in]  p_config_http  http
  * \param[in]  p_config_wifi  wifi
  * \param[in]  p_config_light light
- * \param[in]  uint          *light_count
- * \param[in]  uint           light_max
- * \param[in]  char          *buff          缓存
- * \param[in]  uint           buff_size     缓存大小
  * \return     0-成功，其它失败
  */
-int http_init(p_config_http http, p_config_wifi wifi, 
-              p_config_light light, uint *light_count, uint light_max,
-              char *buff, uint buff_size)
+int http_init(char *buff, uint size, p_config_http http, p_config_wifi wifi, p_config_light light)
 {
-    s_http        = http;
-    s_wifi        = wifi;
-    s_light       = light;
-    s_light_max   = light_max;
-    s_light_count = light_count;
-    s_buff        = buff;
-    s_buff_size   = buff_size;
+    s_buff  = buff;
+    s_size  = size;
+    s_http  = http;
+    s_wifi  = wifi;
+    s_light = light;
 
     xTaskCreate(http_server_task, "http_server", 4096, http, 5, NULL);
     return 0;

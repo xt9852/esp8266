@@ -78,7 +78,7 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
  */
 void wifi_init(p_config_wifi wifi)
 {
-    ESP_LOGI(TAG, "--beg--%s----------------------------", __FUNCTION__);
+    ESP_LOGI(TAG, "------------------------------%s--beg----", __FUNCTION__);
 
     wifi_config_t wifi_config = { 0 };
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -148,5 +148,5 @@ void wifi_init(p_config_wifi wifi)
         vEventGroupDelete(s_wifi_event_group);
     }
 
-    ESP_LOGI(TAG, "--end--%s----------------------------", __FUNCTION__);
+    ESP_LOGI(TAG, "------------------------------%s--end----", __FUNCTION__);
 }
