@@ -54,6 +54,8 @@
 #define LIGHT_MAX_COUNT         16
 
 #define CPU_CLK_NAME            "clk"
+#define CPU_INT0_NAME           "int0"
+#define CPU_INT1_NAME           "int1"
 
 typedef struct _config_http
 {
@@ -117,4 +119,3 @@ int config_put_http(p_config_http http);
 int config_put_wifi(p_config_wifi wifi);
 
 int config_put_light(p_config_light light);
-

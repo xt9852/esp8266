@@ -112,11 +112,14 @@ uint gpio_cpu_get_data(uint count)
 }
 
 /**
- * \brief      输出心跳
- * \param[in]  uint clk   心跳
+ * \brief      输出数据
+ * \param[in]  uint clk     心跳
+ * \param[in]  uint int0    中断0
+ * \param[in]  uint int1    中断1
  * \return     无
  */
-void gpio_cpu_set_clk(uint clk)
+void gpio_cpu_set_data(uint clk, uint int0, uint int1)
 {
-    ESP_LOGE(TAG, "-----------%s clk:%d", __FUNCTION__, clk);
+    ESP_LOGE(TAG, "-----------%s clk:%d int0:%d int0:%d",
+             __FUNCTION__, clk, int0, int1);
 }
