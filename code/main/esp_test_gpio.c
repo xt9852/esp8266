@@ -31,9 +31,9 @@ static void gpio_task(void *pvParameters)
     while (1)
     {
         gpio_set_level(GPIO_ESP8266_LED, 0);    // 熄灭
-        vTaskDelay(500 / portTICK_PERIOD_MS);   // 延时1ms
+        vTaskDelay(1000 / portTICK_PERIOD_MS);  // 延时1秒
         gpio_set_level(GPIO_ESP8266_LED, 1);    // 点亮
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
     vTaskDelete(NULL);
