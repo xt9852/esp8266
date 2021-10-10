@@ -107,7 +107,7 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
           "\"dev\":%d,\"ram\":%d,\"rom\":%d,\"sel\":%d,"
           "\"input\":{\"clk\":%d,\"int0\":%d,\"int1\":%d}}",
           mi_addr_curr, mi_addr_next, mi_addr_true,
-          bus_data, bus_addr, bus_alu,
+          bus_alu, bus_data, bus_addr,
           chk_int, chk_je, chk_jne, chk_jb, chk_jbe, chk_jl, chk_jle,
           sc, sd, ss, rp, rs,
           ra, rb, rc, rd,

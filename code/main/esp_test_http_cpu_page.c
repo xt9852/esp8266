@@ -13,7 +13,7 @@
  /*向下三角形*/.b{border-bottom:none;border-top:6px solid #ccc}\
 </style>\
 <script>\
-    function set_text(data){for(var key in data){document.getElementById(key).innerText=data[key].toString(16).toUpperCase()}}\
+    function set_text(data){for(var key in data){document.getElementById(key).innerText+=data[key].toString(16).toUpperCase()}}\
     function set_back(data, color){for(var key in data){document.getElementById(key).style.background=color[data[key]]}}\
     function set_bus(data, name, type, color){for(var key in data){item=document.getElementById(key+name);item.className=type[data[key]];item.style.borderColor=color[data[key]];}}\
     function on_load(url)\
@@ -54,24 +54,14 @@
 </script>\
 <body onload=\"on_load('/cpu-data?clk=0&int0=0&int1=0')\">\
     <div>\
-        <h3>指令当前地址:</h3>\
-        <h3>指令下条地址:</h3>\
-        <h3>真实下条地址:</h3>\
+        <h3 id='curr'>指令当前地址:</h3>\
+        <h3 id='next'>指令下条地址:</h3>\
+        <h3 id='next_true'>真实下条地址:</h3>\
     </div>\
     <div>\
-        <h3 id='curr'/>\
-        <h3 id='next'/>\
-        <h3 id='next_true'/>\
-    </div>\
-    <div>\
-        <h3>逻辑输出:</h3>\
-        <h3>数据总线:</h3>\
-        <h3>地址总线:</h3>\
-    </div>\
-    <div>\
-        <h3 id='alu'/>\
-        <h3 id='data'/>\
-        <h3 id='addr'/>\
+        <h3 id='alu'>逻辑输出:</h3>\
+        <h3 id='data'>数据总线:</h3>\
+        <h3 id='addr'>地址总线:</h3>\
     </div>\
     <div style='clear:left;text-align:center'>\
         <h3 id='int' class='p'>int</h3>\
@@ -119,7 +109,7 @@
         <h3 id='rf' class='p'>rf</h3>\
         <h3 id='ah' class='p'>ah</h3>\
         <h3 id='al' class='p'>al</h3>\
-        <h3 id='mem' class='p'>mem</h3>\
+        <h3 id='mem' class='p'>m</h3>\
     </div>\
     <div style='clear:left;margin:0'>\
         <h3 id='sc_a' class='b'/>\
