@@ -28,9 +28,13 @@ uint gpio_cpu_get_data(uint count);
 
 /**
  * \brief      输出数据
- * \param[in]  uint clk     心跳
- * \param[in]  uint int0    中断0
- * \param[in]  uint int1    中断1
+ * \param[in]  uint data    数据
  * \return     无
  */
-void gpio_cpu_set_data(uint clk, uint int0, uint int1);
+void gpio_cpu_set_data(uint data);
+
+/**
+ * \brief      保存并输出74LS595数据
+ * \return     无
+ */
+void gpio_cpu_out_data();

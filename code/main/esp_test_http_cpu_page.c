@@ -4,24 +4,16 @@
 #include "esp_log.h"
 #include "esp_test_http_cpu_page.h"
 
-/*
-"rrw=['blue','red','gray','red'];"\
-"rdc=['green','red','green','solid'];"\
-"rbc=['solid','red','green','green'];"\
-"ttc=['solid','red','green','green'];"\
-"tbc=['green','red','green','solid'];"\
-*/
-
 #define HTTP_FILE_CPU "<meta http-equiv='Content-Type' content='charset=utf-8'/>\
 <style>\
- div{margin:0 0 5;padding:0 19;background:green;float:left;}\
- .k{margin:3 9;width:26;border-radius:50%;float:left;background:'gray';cursor:pointer;}\
- .p{margin:3;width:26;border-radius:50%;float:left;}\
- /*向上三角形*/.t{margin:3;border-left:13px solid transparent;border-right:13px solid transparent;border-bottom:13px solid #ccc;float:left;}\
- /*向下三角形*/.b{margin:3;border-left:13px solid transparent;border-right:13px solid transparent;border-top:13px solid #ccc;float:left;}\
+ div{margin:0 0 2;padding:0 4;background:green;float:left;}\
+ .p,.k{margin:2;width:24;border-radius:50%;float:left;}\
+ .k{margin:2 9;cursor:pointer;}\
+ /*向上三角形*/.t,.b{margin:8;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #ccc;float:left;}\
+ /*向下三角形*/.b{border-bottom:none;border-top:6px solid #ccc}\
 </style>\
 <script>\
-    function set_text(data){for(var key in data){document.getElementById(key).innerText=data[key]}}\
+    function set_text(data){for(var key in data){document.getElementById(key).innerText=data[key].toString(16).toUpperCase()}}\
     function set_back(data, color){for(var key in data){document.getElementById(key).style.background=color[data[key]]}}\
     function set_bus(data, name, type, color){for(var key in data){item=document.getElementById(key+name);item.className=type[data[key]];item.style.borderColor=color[data[key]];}}\
     function on_load(url)\
@@ -48,7 +40,10 @@
             set_bus(rp['reg'], '_a', abs, abc);\
         }\
     }\
-    function on_int(item){item.style.background=(item.style.background=='red')?'gray':'red'}\
+    function on_int(item)\
+    {\
+        item.style.background=(item.style.background=='red')?'gray':'red';\
+    }\
     function on_clk(item)\
     {\
         var clk=(item.style.background=='red')?'0':'1';\
@@ -59,9 +54,9 @@
 </script>\
 <body onload=\"on_load('/cpu-data?clk=0&int0=0&int1=0')\">\
     <div>\
-        <h3>指令当前地址：</h3>\
-        <h3>指令下条地址：</h3>\
-        <h3>真实下条地址：</h3>\
+        <h3>指令当前地址:</h3>\
+        <h3>指令下条地址:</h3>\
+        <h3>真实下条地址:</h3>\
     </div>\
     <div>\
         <h3 id='curr'/>\
@@ -69,14 +64,14 @@
         <h3 id='next_true'/>\
     </div>\
     <div>\
-        <h3>数据总线：</h3>\
-        <h3>地址总线：</h3>\
-        <h3>逻辑输出：</h3>\
+        <h3>逻辑输出:</h3>\
+        <h3>数据总线:</h3>\
+        <h3>地址总线:</h3>\
     </div>\
     <div>\
+        <h3 id='alu'/>\
         <h3 id='data'/>\
         <h3 id='addr'/>\
-        <h3 id='alu'/>\
     </div>\
     <div style='clear:left;text-align:center'>\
         <h3 id='int' class='p'>int</h3>\
@@ -91,22 +86,22 @@
         <h3 id='clk' class='k' onclick='on_clk(this)'>clk</h3>\
     </div>\
     <div style='clear:left;margin:0'>\
-        <h3 id='sc_d' class='t'></h3>\
-        <h3 id='sd_d' class='t'></h3>\
-        <h3 id='ss_d' class='t'></h3>\
-        <h3 id='rp_d' class='t'></h3>\
-        <h3 id='rs_d' class='t'></h3>\
-        <h3 id='ra_d' class='t'></h3>\
-        <h3 id='rb_d' class='t'></h3>\
-        <h3 id='rc_d' class='t'></h3>\
-        <h3 id='rd_d' class='t'></h3>\
-        <h3 id='rt0_d' class='t'></h3>\
-        <h3 id='rt1_d' class='t'></h3>\
-        <h3 id='ri_d' class='t'></h3>\
-        <h3 id='rf_d' class='t'></h3>\
-        <h3 id='ah_d' class='t'></h3>\
-        <h3 id='al_d' class='t'></h3>\
-        <h3 id='mem_d' class='t'></h3>\
+        <h3 id='sc_d' class='t'/>\
+        <h3 id='sd_d' class='t'/>\
+        <h3 id='ss_d' class='t'/>\
+        <h3 id='rp_d' class='t'/>\
+        <h3 id='rs_d' class='t'/>\
+        <h3 id='ra_d' class='t'/>\
+        <h3 id='rb_d' class='t'/>\
+        <h3 id='rc_d' class='t'/>\
+        <h3 id='rd_d' class='t'/>\
+        <h3 id='r0_d' class='t'/>\
+        <h3 id='r1_d' class='t'/>\
+        <h3 id='ri_d' class='t'/>\
+        <h3 id='rf_d' class='t'/>\
+        <h3 id='ah_d' class='t'/>\
+        <h3 id='al_d' class='t'/>\
+        <h3 id='mem_d' class='t'/>\
     </div>\
     <div style='clear:left;margin:0;text-align:center'>\
         <h3 id='sc' class='p'>sc</h3>\
@@ -118,8 +113,8 @@
         <h3 id='rb' class='p'>rb</h3>\
         <h3 id='rc' class='p'>rc</h3>\
         <h3 id='rd' class='p'>rd</h3>\
-        <h3 id='rt0' class='p'>rt0</h3>\
-        <h3 id='rt1' class='p'>rt1</h3>\
+        <h3 id='r0' class='p'>r0</h3>\
+        <h3 id='r1' class='p'>r1</h3>\
         <h3 id='ri' class='p'>ri</h3>\
         <h3 id='rf' class='p'>rf</h3>\
         <h3 id='ah' class='p'>ah</h3>\
@@ -127,22 +122,22 @@
         <h3 id='mem' class='p'>mem</h3>\
     </div>\
     <div style='clear:left;margin:0'>\
-        <h3 id='sc_a' class='b'></h3>\
-        <h3 id='sd_a' class='b'></h3>\
-        <h3 id='ss_a' class='b'></h3>\
-        <h3 id='rp_a' class='b'></h3>\
-        <h3 id='rs_a' class='b'></h3>\
-        <h3 id='ra_a' class='b'></h3>\
-        <h3 id='rb_a' class='b'></h3>\
-        <h3 id='rc_a' class='b'></h3>\
-        <h3 id='rd_a' class='b'></h3>\
-        <h3 id='rt0_a' class='b'></h3>\
-        <h3 id='rt1_a' class='b'></h3>\
-        <h3 id='ri_a' class='b'></h3>\
-        <h3 id='rf_a' class='b'></h3>\
-        <h3 id='ah_a' class='b'></h3>\
-        <h3 id='al_a' class='b'></h3>\
-        <h3 id='mem_a' class='b'></h3>\
+        <h3 id='sc_a' class='b'/>\
+        <h3 id='sd_a' class='b'/>\
+        <h3 id='ss_a' class='b'/>\
+        <h3 id='rp_a' class='b'/>\
+        <h3 id='rs_a' class='b'/>\
+        <h3 id='ra_a' class='b'/>\
+        <h3 id='rb_a' class='b'/>\
+        <h3 id='rc_a' class='b'/>\
+        <h3 id='rd_a' class='b'/>\
+        <h3 id='r0_a' class='b'/>\
+        <h3 id='r1_a' class='b'/>\
+        <h3 id='ri_a' class='b'/>\
+        <h3 id='rf_a' class='b'/>\
+        <h3 id='ah_a' class='b'/>\
+        <h3 id='al_a' class='b'/>\
+        <h3 id='mem_a' class='b'/>\
     </div>\
 </body>"
 

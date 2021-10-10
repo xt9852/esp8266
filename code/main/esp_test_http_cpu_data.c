@@ -7,7 +7,6 @@
 #include "esp_test_http_cpu_data.h"
 
 
-
 /**
  * \brief      CPU页面数据
  * \param[in]  const char   *param          URL请求参数
@@ -39,9 +38,14 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
         return 400;
     }
 
-    gpio_cpu_set_data(clk, int0, int1);
+    // 输出数据
+    gpio_cpu_set_data(clk);
+    gpio_cpu_set_data(int0);
+    gpio_cpu_set_data(int1);
+    gpio_cpu_out_data();
 
-    gpio_cpu_load_data(); // 载入数据
+    // 载入数据
+    gpio_cpu_load_data();
 
     uint mi_addr_curr = gpio_cpu_get_data(12);
     uint mi_addr_next = gpio_cpu_get_data(12);
@@ -60,7 +64,7 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
     uint rb           = 6;//gpio_cpu_get_data(3);
     uint rc           = 7;//gpio_cpu_get_data(3);
     uint rd           = rand()%8;//gpio_cpu_get_data(3);
-    uint mem          = gpio_cpu_get_data(3);
+    uint mem          = rand()%8;//gpio_cpu_get_data(3);
     uint alu          = gpio_cpu_get_data(7);
 
     uint chk_int      = gpio_cpu_get_data(1);
@@ -71,8 +75,8 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
     uint chk_jl       = gpio_cpu_get_data(1);
     uint chk_jle      = gpio_cpu_get_data(1);
 
-    uint rt0          = gpio_cpu_get_data(3);
-    uint rt1          = gpio_cpu_get_data(3);
+    uint r0           = gpio_cpu_get_data(3);
+    uint r1           = gpio_cpu_get_data(3);
 
     uint ri           = gpio_cpu_get_data(2);
     uint rf           = gpio_cpu_get_data(2);
@@ -92,12 +96,12 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
     }
 
     len = snprintf(content, *content_len, "{"
-          "\"addr\":{\"curr\":\"0x%03X\",\"next\":\"0x%03X\",\"next_true\":\"0x%03X\"},"
-          "\"bus\":{\"data\":\"0x%02X\",\"addr\":\"0x%04X\",\"alu\":\"0x%02X\"},"
+          "\"addr\":{\"curr\":%d,\"next\":%d,\"next_true\":%d},"
+          "\"bus\":{\"alu\":%d,\"data\":%d,\"addr\":%d},"
           "\"chk\":{\"int\":%d,\"je\":%d,\"jne\":%d,\"jb\":%d,\"jbe\":%d,\"jl\":%d,\"jle\":%d},"
           "\"reg\":{\"sc\":%d,\"sd\":%d,\"ss\":%d,\"rp\":%d,\"rs\":%d,"
                    "\"ra\":%d,\"rb\":%d,\"rc\":%d,\"rd\":%d,"
-                   "\"rt0\":%d,\"rt1\":%d},"
+                   "\"r0\":%d,\"r1\":%d},"
           "\"mem\":%d,\"alu\":%d,"
           "\"ri\":%d,\"rf\":%d,\"ah\":%d,\"al\":%d,"
           "\"dev\":%d,\"ram\":%d,\"rom\":%d,\"sel\":%d,"
@@ -107,7 +111,7 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
           chk_int, chk_je, chk_jne, chk_jb, chk_jbe, chk_jl, chk_jle,
           sc, sd, ss, rp, rs,
           ra, rb, rc, rd,
-          rt0, rt1,
+          r0, r1,
           mem, alu,
           ri, rf, ah, al,
           dev, ram, rom, sel,

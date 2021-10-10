@@ -10,10 +10,15 @@
 #include "esp_test_gpio.h"
 
 
-#define GPIO_LED_ID         2
-#define GPIO_74LS165_LOAD   16
-#define GPIO_74LS165_CLK    5
-#define GPIO_74LS165_DATA   4
+#define GPIO_ESP8266_LED    2   // esp8266上的led灯
+
+#define GPIO_74LS165_LOAD   16  // 输出,加载数据
+#define GPIO_74LS165_CLK    5   // 输出,心跳
+#define GPIO_74LS165_DATA   4   // 输入,数据
+
+#define GPIO_74LS595_DATA   14  // 输出,数据
+#define GPIO_74LS595_MOVE   13  // 输出,移位数据
+#define GPIO_74LS595_SAVE   12  // 输出,保存数据
 
 
 /**
@@ -25,10 +30,10 @@ static void gpio_task(void *pvParameters)
 {
     while (1)
     {
-        gpio_set_level(GPIO_LED_ID, 0);         // 熄灭
-        vTaskDelay(500 / portTICK_PERIOD_MS);   // 延时500ms
-        gpio_set_level(GPIO_LED_ID, 1);         // 点亮
-        vTaskDelay(500 / portTICK_PERIOD_MS);   // 延时500ms
+        gpio_set_level(GPIO_ESP8266_LED, 0);    // 熄灭
+        vTaskDelay(500 / portTICK_PERIOD_MS);   // 延时1ms
+        gpio_set_level(GPIO_ESP8266_LED, 1);    // 点亮
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 
     vTaskDelete(NULL);
@@ -57,9 +62,9 @@ void gpio_init(int id, int mode)
  */
 void gpio_led_init()
 {
-    gpio_init(GPIO_LED_ID, GPIO_MODE_OUTPUT);
+    gpio_init(GPIO_ESP8266_LED, GPIO_MODE_OUTPUT);
 
-    xTaskCreate(gpio_task, "gpio", 4096, NULL, 5, NULL);
+    xTaskCreate(gpio_task, "led", 4096, NULL, 5, NULL);
 }
 
 /**
@@ -71,6 +76,11 @@ void gpio_cpu_init()
     gpio_init(GPIO_74LS165_CLK,  GPIO_MODE_OUTPUT);
     gpio_init(GPIO_74LS165_LOAD, GPIO_MODE_OUTPUT);
     gpio_init(GPIO_74LS165_DATA, GPIO_MODE_INPUT);
+    gpio_set_level(GPIO_74LS165_LOAD, 1);   // 移位
+
+    gpio_init(GPIO_74LS595_DATA, GPIO_MODE_OUTPUT);
+    gpio_init(GPIO_74LS595_SAVE, GPIO_MODE_OUTPUT);
+    gpio_init(GPIO_74LS595_MOVE, GPIO_MODE_OUTPUT);
 }
 
 /**
@@ -80,9 +90,9 @@ void gpio_cpu_init()
 void gpio_cpu_load_data()
 {
     gpio_set_level(GPIO_74LS165_LOAD, 0);   // 将并行数据存入寄存器
-    vTaskDelay(2 / portTICK_PERIOD_MS);     // 延时2ms
+    vTaskDelay(2 / portTICK_PERIOD_MS);     // 延时1ms
     gpio_set_level(GPIO_74LS165_LOAD, 1);   // 设置为读取模式
-    vTaskDelay(2 / portTICK_PERIOD_MS);     // 延时2ms
+    vTaskDelay(2 / portTICK_PERIOD_MS);     // 延时1ms
 }
 
 /**
@@ -113,13 +123,28 @@ uint gpio_cpu_get_data(uint count)
 
 /**
  * \brief      输出数据
- * \param[in]  uint clk     心跳
- * \param[in]  uint int0    中断0
- * \param[in]  uint int1    中断1
+ * \param[in]  uint data    数据
  * \return     无
  */
-void gpio_cpu_set_data(uint clk, uint int0, uint int1)
+void gpio_cpu_set_data(uint data)
 {
-    ESP_LOGE(TAG, "-----------%s clk:%d int0:%d int0:%d",
-             __FUNCTION__, clk, int0, int1);
+    gpio_set_level(GPIO_74LS595_DATA, 0);   // 输出数据
+    vTaskDelay(1 / portTICK_PERIOD_MS);     // 延时1ms
+
+    gpio_set_level(GPIO_74LS595_MOVE, 1);   // 上升沿时移位
+    vTaskDelay(1 / portTICK_PERIOD_MS);     // 延时1ms
+    gpio_set_level(GPIO_74LS595_MOVE, 0);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+}
+
+/**
+ * \brief      保存并输出74LS595数据
+ * \return     无
+ */
+void gpio_cpu_out_data()
+{
+    gpio_set_level(GPIO_74LS595_SAVE, 1);   // 上升沿时保存数据
+    vTaskDelay(1 / portTICK_PERIOD_MS);     // 延时1ms
+    gpio_set_level(GPIO_74LS595_SAVE, 0);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
 }
