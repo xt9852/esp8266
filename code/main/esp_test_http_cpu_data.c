@@ -63,10 +63,6 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
 
         gpio_cpu_out_data();
     }
-    else
-    {
-
-    }
 
     // 载入数据
     gpio_cpu_load_data();
