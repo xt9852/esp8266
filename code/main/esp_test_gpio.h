@@ -8,6 +8,13 @@
 void gpio_led_init();
 
 /**
+ * \brief      led灯
+ * \param[in]  int led 是否点亮led
+ * \return     无
+ */
+void gpio_led(int led);
+
+/**
  * \brief      初始化74LS165使用的GPIO
  * \return     无
  */

@@ -6,6 +6,9 @@
 #include "esp_test_gpio.h"
 #include "esp_test_http_cpu_data.h"
 
+static uint g_clk  = 0;
+static uint g_int0 = 0;
+static uint g_int1 = 0;
 
 /**
  * \brief      CPU页面数据
@@ -38,11 +41,32 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
         return 400;
     }
 
-    // 输出数据
-    gpio_cpu_set_data(clk);
-    gpio_cpu_set_data(int0);
-    gpio_cpu_set_data(int1);
-    gpio_cpu_out_data();
+    if (2 != clk) // 不发送数据
+    {
+        g_clk  = clk;
+        g_int0 = int0;
+        g_int1 = int1;
+
+        // led灯
+        gpio_led(!clk);
+
+        // 输出数据
+        gpio_cpu_set_data(0);
+        gpio_cpu_set_data(0);
+        gpio_cpu_set_data(0);
+        gpio_cpu_set_data(0);
+
+        gpio_cpu_set_data(0);
+        gpio_cpu_set_data(int0);
+        gpio_cpu_set_data(int1);
+        gpio_cpu_set_data(clk);
+
+        gpio_cpu_out_data();
+    }
+    else
+    {
+
+    }
 
     // 载入数据
     gpio_cpu_load_data();
@@ -89,15 +113,19 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
     uint rom          = gpio_cpu_get_data(3);
     uint sel          = gpio_cpu_get_data(2);
 
-    if (al == 0 || al == 2) // al-clr=0
+    /*
+    if (al == 0 || al == 2) // al-clr=0,清空中断标记
     {
-        int0 = 0;
-        int1 = 0;
+        g_int0 = 0;
+        g_int1 = 0;
     }
+    */
 
     len = snprintf(content, *content_len, "{"
           "\"addr\":{\"curr\":%d,\"next\":%d,\"next_true\":%d},"
+          "\"addr_len\":{\"curr\":3,\"next\":3,\"next_true\":3},"
           "\"bus\":{\"alu\":%d,\"data\":%d,\"addr\":%d},"
+          "\"bus_len\":{\"alu\":2,\"data\":2,\"addr\":4},"
           "\"chk\":{\"int\":%d,\"je\":%d,\"jne\":%d,\"jb\":%d,\"jbe\":%d,\"jl\":%d,\"jle\":%d},"
           "\"reg\":{\"sc\":%d,\"sd\":%d,\"ss\":%d,\"rp\":%d,\"rs\":%d,"
                    "\"ra\":%d,\"rb\":%d,\"rc\":%d,\"rd\":%d,"
@@ -115,7 +143,7 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
           mem, alu,
           ri, rf, ah, al,
           dev, ram, rom, sel,
-          clk, int0, int1);
+          g_clk, g_int0, g_int1);
 
     *content_len = len;
     return 200;

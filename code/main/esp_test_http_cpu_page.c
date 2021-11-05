@@ -13,16 +13,31 @@
  /*向下三角形*/.b{border-bottom:none;border-top:6px solid #ccc}\
 </style>\
 <script>\
-    function set_text(data){for(var key in data){document.getElementById(key).innerText+=data[key].toString(16).toUpperCase()}}\
-    function set_back(data, color){for(var key in data){document.getElementById(key).style.background=color[data[key]]}}\
-    function set_bus(data, name, type, color){for(var key in data){item=document.getElementById(key+name);item.className=type[data[key]];item.style.borderColor=color[data[key]];}}\
-    function on_load(url)\
-    {\
+    function set_text(data, len){\
+        for(var key in data){\
+            txt=document.getElementById(key).innerText;\
+            title=txt.substr(0, txt.lastIndexOf(':0x')+3);\
+            number=data[key].toString(16).toUpperCase();\
+            document.getElementById(key).innerText=title+number.padStart(len[key], '0');\
+        }\
+    }\
+    function set_back(data, color){\
+        for(var key in data){\
+            document.getElementById(key).style.background=color[data[key]];\
+        }\
+    }\
+    function set_bus(data, name, type, color){\
+        for(var key in data){\
+            item=document.getElementById(key+name);\
+            item.className=type[data[key]];\
+            item.style.borderColor=color[data[key]];\
+        }\
+    }\
+    function on_load(url){\
         req=new XMLHttpRequest();\
         req.open('GET', url);\
         req.send(null);\
-        req.onload=function()\
-        {\
+        req.onload=function(){\
             if(req.readyState!=4 || req.status!=200){console.log(req.status);return;}\
             rp=JSON.parse(req.responseText);\
             chk=['gray','red'];\
@@ -31,8 +46,8 @@
             abs=['b','b','t','t','b','b','b','b'];/*地址总线类型*/\
             dbc=['solid','green','solid','green','solid','green','solid','green'];/*数据总线颜色*/\
             abc=['solid','solid','solid','solid','green','green','green','green'];/*地址总线颜色*/\
-            set_text(rp['addr']);\
-            set_text(rp['bus']);\
+            set_text(rp['addr'], rp['addr_len']);\
+            set_text(rp['bus'], rp['bus_len']);\
             set_back(rp['chk'], chk);\
             set_back(rp['reg'], reg);\
             set_back(rp['input'], chk);\
@@ -40,28 +55,26 @@
             set_bus(rp['reg'], '_a', abs, abc);\
         }\
     }\
-    function on_int(item)\
-    {\
+    function on_int(item){\
         item.style.background=(item.style.background=='red')?'gray':'red';\
     }\
-    function on_clk(item)\
-    {\
+    function on_clk(item){\
         var clk=(item.style.background=='red')?'0':'1';\
         var int0=(document.getElementById('int0').style.background=='red')?'1':'0';\
         var int1=(document.getElementById('int1').style.background=='red')?'1':'0';\
         on_load('/cpu-data?clk='+clk+'&int0='+int0+'&int1='+int1);\
     }\
 </script>\
-<body onload=\"on_load('/cpu-data?clk=0&int0=0&int1=0')\">\
+<body onload=\"on_load('/cpu-data?clk=2&int0=0&int1=0')\">\
     <div>\
-        <h3 id='curr'>指令当前地址:</h3>\
-        <h3 id='next'>指令下条地址:</h3>\
-        <h3 id='next_true'>真实下条地址:</h3>\
+        <h3 id='curr'>指令当前地址:0x</h3>\
+        <h3 id='next'>指令下条地址:0x</h3>\
+        <h3 id='next_true'>真实下条地址:0x</h3>\
     </div>\
     <div>\
-        <h3 id='alu'>逻辑输出:</h3>\
-        <h3 id='data'>数据总线:</h3>\
-        <h3 id='addr'>地址总线:</h3>\
+        <h3 id='alu'>逻辑输出:0x</h3>\
+        <h3 id='data'>数据总线:0x</h3>\
+        <h3 id='addr'>地址总线:0x</h3>\
     </div>\
     <div style='clear:left;text-align:center'>\
         <h3 id='int' class='p'>int</h3>\
