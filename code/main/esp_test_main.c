@@ -25,15 +25,15 @@ void app_main()
 
     s_buff = (char*)malloc(s_size + 1);
 
-    gpio_led_init();
-
-    gpio_cpu_init();
-
     config_init(s_buff, s_size, &s_config_http, &s_config_wifi, &s_config_light);
 
     wifi_init(&s_config_wifi);
 
     http_init(s_buff, s_size, &s_config_http, &s_config_wifi, &s_config_light);
+    
+    gpio_led_init();
+
+    gpio_cpu_init();
 
     ESP_LOGI(TAG, "----------------------end------------------------------");
 }

@@ -6,9 +6,35 @@
 #include "esp_test_gpio.h"
 #include "esp_test_http_cpu_data.h"
 
+static uint g_init = 0;
 static uint g_clk  = 0;
 static uint g_int0 = 0;
 static uint g_int1 = 0;
+
+void http_cpu_set_data()
+{
+    gpio_cpu_set_data(0);
+    gpio_cpu_set_data(0);
+    gpio_cpu_set_data(0);
+    gpio_cpu_set_data(1);
+
+    gpio_cpu_set_data(0);
+    gpio_cpu_set_data(0);
+    gpio_cpu_set_data(1);
+    gpio_cpu_set_data(0);
+
+    gpio_cpu_set_data(0);
+    gpio_cpu_set_data(0);
+    gpio_cpu_set_data(1);
+    gpio_cpu_set_data(1);
+
+    gpio_cpu_set_data(0);
+    gpio_cpu_set_data(g_int0);
+    gpio_cpu_set_data(g_int1);
+    gpio_cpu_set_data(g_clk);
+
+    gpio_cpu_out_data();
+}
 
 /**
  * \brief      CPU页面数据
@@ -41,7 +67,13 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
         return 400;
     }
 
-    if (2 != clk) // 不发送数据
+    if (!g_init)
+    {
+        g_init = true;
+        http_cpu_set_data();
+    }
+
+    if (2 != clk) // 发送数据
     {
         g_clk  = clk;
         g_int0 = int0;
@@ -51,17 +83,7 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
         gpio_led(!clk);
 
         // 输出数据
-        gpio_cpu_set_data(0);
-        gpio_cpu_set_data(0);
-        gpio_cpu_set_data(0);
-        gpio_cpu_set_data(0);
-
-        gpio_cpu_set_data(0);
-        gpio_cpu_set_data(int0);
-        gpio_cpu_set_data(int1);
-        gpio_cpu_set_data(clk);
-
-        gpio_cpu_out_data();
+        http_cpu_set_data();
     }
 
     // 载入数据
