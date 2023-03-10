@@ -36,23 +36,22 @@
 #define GPIO_ESP8266_LED    2   // esp8266上的led灯
 
 // 74LS165并入串出
+// 使用GPIO16,5,4针脚对应右侧的上数1,2,3针脚
 #define GPIO_74LS165_LOAD   16  // 输出,加载数据,低电平有效
-#define GPIO_74LS165_CLK    5   // 输出,心跳,上升沿触发
-#define GPIO_74LS165_DATA   4   // 输入,数据.LOAD->CLK->DATA
+#define GPIO_74LS165_NEXT   5   // 输出,移位数据,上升沿触发
+#define GPIO_74LS165_DATA   4   // 输入,读取数据.LOAD->CLK->DATA
 
 // 74LS595串入并出
 // 使用GPIO14,12,13针脚对应右侧的上数8,9,10针脚
-#define GPIO_74LS595_CLK    14  // 输出,移位数据,上升沿触发
+#define GPIO_74LS595_DATA   13  // 输出,输出数据.DATA->SAVE->OUT
+#define GPIO_74LS595_SAVE   14  // 输出,移位数据,上升沿触发
 #define GPIO_74LS595_OUT    12  // 输出,保存数据,上升沿触发
-#define GPIO_74LS595_DATA   13  // 输出,数据.DATA->CLK->OUT
 
 
 /**
  * \brief      任务回调函数
  * \param[in]  void *pvParameters  参数
  * \return     无
-*/
-
 
 static void gpio_task(void *pvParameters)
 {
@@ -65,8 +64,7 @@ static void gpio_task(void *pvParameters)
     }
 
     vTaskDelete(NULL);
-}
-
+}*/
 
 /**
  * \brief      初始化GPIO
@@ -86,7 +84,7 @@ void gpio_init(int id, int mode)
 }
 
 /**
- * \brief      led灯,1秒间隔闪灯
+ * \brief      初始化NodeMCU板载led灯
  * \return     无
  */
 void gpio_led_init()
@@ -95,106 +93,137 @@ void gpio_led_init()
 
     gpio_init(GPIO_ESP8266_LED, GPIO_MODE_OUTPUT);
     gpio_set_level(GPIO_ESP8266_LED, 1);
-    
-    xTaskCreate(gpio_task, "led", 4096, NULL, 5, NULL);
-    
+
+    //xTaskCreate(gpio_task, "led", 4096, NULL, 5, NULL);
+
     ESP_LOGI(TAG, "---------------%s--end----", __FUNCTION__);
 }
 
 /**
  * \brief      led灯
- * \param[in]  int led 是否点亮led
+ * \param[in]  uint led 是否点亮led
  * \return     无
  */
-void gpio_led(int led)
+void gpio_led(uint led)
 {
     gpio_set_level(GPIO_ESP8266_LED, led);
+}
+
+/**
+ * \brief      初始化74LS595使用的GPIO
+ * \return     无
+ */
+void gpio_74ls595_init()
+{
+    ESP_LOGI(TAG, "---------------%s--beg----", __FUNCTION__);
+
+    gpio_init(GPIO_74LS595_DATA, GPIO_MODE_OUTPUT);
+    gpio_init(GPIO_74LS595_SAVE, GPIO_MODE_OUTPUT);
+    gpio_init(GPIO_74LS595_OUT,  GPIO_MODE_OUTPUT);
+
+    gpio_set_level(GPIO_74LS595_SAVE, 0);   // 上升沿有效
+    gpio_set_level(GPIO_74LS595_OUT,  0);   // 上升沿有效
+
+    gpio_74ls595_save(0);
+    gpio_74ls595_save(1);
+    gpio_74ls595_save(1);
+    gpio_74ls595_save(1);
+    gpio_74ls595_save(0);
+    gpio_74ls595_save(1);
+    gpio_74ls595_save(0);
+    gpio_74ls595_save(1);
+
+    gpio_74ls595_output();
+
+    ESP_LOGI(TAG, "---------------%s--end----", __FUNCTION__);
+}
+
+/**
+ * \brief      向74LS595串行输入数据
+ * \param[in]  uint data 布尔值
+ * \return     无
+ */
+void gpio_74ls595_save(uint data)
+{
+    gpio_set_level(GPIO_74LS595_DATA,  data);
+
+    gpio_set_level(GPIO_74LS595_SAVE, 1);   // 上升沿有效,保存数据并移位
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    gpio_set_level(GPIO_74LS595_SAVE, 0);
+
+    ESP_LOGI(TAG, "---------------%s--data----%d", __FUNCTION__, data);
+}
+
+/**
+ * \brief      从74LS595并行输出数据
+ * \param[in]  无
+ * \return     无
+ */
+void gpio_74ls595_output()
+{
+    gpio_set_level(GPIO_74LS595_OUT, 1);    // 上升沿保存数据
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    gpio_set_level(GPIO_74LS595_OUT, 0);
+
+    ESP_LOGI(TAG, "---------------%s", __FUNCTION__);
 }
 
 /**
  * \brief      初始化74LS165使用的GPIO
  * \return     无
  */
-void gpio_cpu_init()
+void gpio_74ls165_init()
 {
     ESP_LOGI(TAG, "---------------%s--beg----", __FUNCTION__);
 
-    gpio_init(GPIO_74LS165_CLK,  GPIO_MODE_OUTPUT);
     gpio_init(GPIO_74LS165_LOAD, GPIO_MODE_OUTPUT);
+    gpio_init(GPIO_74LS165_NEXT, GPIO_MODE_OUTPUT);
     gpio_init(GPIO_74LS165_DATA, GPIO_MODE_INPUT);
-    gpio_set_level(GPIO_74LS165_CLK,  0);
-    gpio_set_level(GPIO_74LS165_LOAD, 1);
 
-    gpio_init(GPIO_74LS595_DATA, GPIO_MODE_OUTPUT);
-    gpio_init(GPIO_74LS595_CLK,  GPIO_MODE_OUTPUT);
-    gpio_init(GPIO_74LS595_OUT,  GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_74LS595_CLK, 0);
-    gpio_set_level(GPIO_74LS595_OUT, 0);
-    
+    gpio_set_level(GPIO_74LS165_LOAD, 1);   // 高电平-设置为读取模式,低电平-将并行数据存入寄存器
+    gpio_set_level(GPIO_74LS165_NEXT, 0);   // 上升沿有效
+
     ESP_LOGI(TAG, "---------------%s--end----", __FUNCTION__);
 }
 
 /**
- * \brief      载入74LS165数据
+ * \brief      向74LS165存入并行数据
  * \return     无
  */
-void gpio_cpu_load_data()
+void gpio_74ls165_load_data()
 {
-    gpio_set_level(GPIO_74LS165_LOAD, 0);   // 低电平,将并行数据存入寄存器
-    vTaskDelay(2 / portTICK_PERIOD_MS);
-    gpio_set_level(GPIO_74LS165_LOAD, 1);   // 高电平,设置为读取模式
-    vTaskDelay(2 / portTICK_PERIOD_MS);
+    gpio_set_level(GPIO_74LS165_LOAD, 0);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    gpio_set_level(GPIO_74LS165_LOAD, 1);
+
+    ESP_LOGI(TAG, "---------------%s", __FUNCTION__);
 }
 
 /**
- * \brief      读取74LS165数据,组装成数据
+ * \brief      从74LS165串行读取数据
  * \param[in]  int count   组装数据的个数
  * \return     数据
  */
-uint gpio_cpu_get_data(uint count)
+uint gpio_74ls165_get_data(uint count)
 {
+    ESP_LOGI(TAG, "---------------%s--count----%d", __FUNCTION__, count);
+    
     uint i;
-
+    uint bit;
     uint data = 0;
 
     for (i = 0; i < count; i++)
     {
-        data = (data << 1) | gpio_get_level(GPIO_74LS165_DATA);    // 读取数据
-        vTaskDelay(2 / portTICK_PERIOD_MS);
+        bit = gpio_get_level(GPIO_74LS165_DATA); // 读取数据
+        data = (data << 1) | bit;
 
-        gpio_set_level(GPIO_74LS165_CLK, 1);        // 上升沿输出已存入寄存器的数据
-        vTaskDelay(2 / portTICK_PERIOD_MS);
-        gpio_set_level(GPIO_74LS165_CLK, 0);
-        vTaskDelay(2 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "---------------%s--data----%d", __FUNCTION__, bit);
+
+        gpio_set_level(GPIO_74LS165_NEXT, 1);                   // 上升沿有效,移位已存入寄存器的数据
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        gpio_set_level(GPIO_74LS165_NEXT, 0);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 
     return data;
-}
-
-/**
- * \brief      输出数据
- * \param[in]  uint data    数据
- * \return     无
- */
-void gpio_cpu_set_data(uint data)
-{
-    gpio_set_level(GPIO_74LS595_DATA, data);   // 输出数据
-    vTaskDelay(2 / portTICK_PERIOD_MS);
-
-    gpio_set_level(GPIO_74LS595_CLK, 1);    // 上升沿时移位
-    vTaskDelay(2 / portTICK_PERIOD_MS);
-    gpio_set_level(GPIO_74LS595_CLK, 0);
-    vTaskDelay(2 / portTICK_PERIOD_MS);
-}
-
-/**
- * \brief      保存并输出74LS595数据
- * \return     无
- */
-void gpio_cpu_out_data()
-{
-    gpio_set_level(GPIO_74LS595_OUT, 1);    // 上升沿时保存数据并输出
-    vTaskDelay(2 / portTICK_PERIOD_MS);
-    gpio_set_level(GPIO_74LS595_OUT, 0);
-    vTaskDelay(2 / portTICK_PERIOD_MS);
 }

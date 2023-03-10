@@ -28,23 +28,6 @@ static p_config_http  s_http;
 static p_config_wifi  s_wifi;
 static p_config_light s_light;
 
-/**
- * \brief      任务回调函数
- * \param[in]  void* pvParameters  参数
- * \return     无
- */
-static void http_client_task(void *pvParameters)
-{
-    int client_sock = (int)pvParameters;
-
-    while (http_process_client_request(client_sock) >= 0);
-
-    ESP_LOGI(TAG, "Shutting down client socket %d", client_sock);
-    shutdown(client_sock, 0);
-    close(client_sock);
-
-    vTaskDelete(NULL);
-}
 
 /**
  * \brief      创建监听socket
@@ -136,7 +119,7 @@ char* http_get_arg(char *uri)
         ESP_LOGI(TAG, "arg:%s", ch);
         return ch;
     }
-    
+
     return NULL;
 }
 
@@ -250,6 +233,24 @@ int http_process_client_request(int client_sock)
 
     ESP_LOGI(TAG, "--------------------%s--end----", __FUNCTION__);
     return 0;
+}
+
+/**
+ * \brief      任务回调函数
+ * \param[in]  void* pvParameters  参数
+ * \return     无
+ */
+static void http_client_task(void *pvParameters)
+{
+    int client_sock = (int)pvParameters;
+
+    while (http_process_client_request(client_sock) >= 0);
+
+    ESP_LOGI(TAG, "Shutting down client socket %d", client_sock);
+    shutdown(client_sock, 0);
+    close(client_sock);
+
+    vTaskDelete(NULL);
 }
 
 /**

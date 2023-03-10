@@ -100,22 +100,32 @@ typedef struct _config_light
  */
 int config_init(char *buff, uint size, p_config_http http, p_config_wifi wifi, p_config_light light);
 
-int config_http_get_data(const char *json, p_config_http http);
-
-int config_http_get_json(const p_config_http http, char *json);
-
-int config_wifi_get_data(const char *json, p_config_wifi wifi);
-
-int config_wifi_get_json(const p_config_wifi wifi, char *json);
-
-int config_light_get_data(const char *json, p_config_light light);
-
-int config_light_get_json(const p_config_light light, char *json);
-
+/**
+ * \brief      读取配置文件，内容为JSON字符串，解析JOSN
+ * \param[out] p_config_http  *http
+ * \param[out] p_config_wifi  *wifi
+ * \param[out] p_config_light *light
+ * \return     int 0-成功，其它失败
+ */
 int config_get_data(p_config_http http, p_config_wifi wifi, p_config_light light);
 
+/**
+ * \brief      生成JOSN字符串，写入配置文件
+ * \param[in]  p_config_http *http
+ * \return     int 0-成功，其它失败
+ */
 int config_put_http(p_config_http http);
 
+/**
+ * \brief      生成JOSN字符串，写入配置文件
+ * \param[in]  p_config_wifi *wifi
+ * \return     int 0-成功，其它失败
+ */
 int config_put_wifi(p_config_wifi wifi);
 
+/**
+ * \brief      生成JOSN字符串，写入配置文件
+ * \param[in]  p_config_light *light
+ * \return     int 0-成功，其它失败
+ */
 int config_put_light(p_config_light light);

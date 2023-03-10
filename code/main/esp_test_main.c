@@ -30,10 +30,12 @@ void app_main()
     wifi_init(&s_config_wifi);
 
     http_init(s_buff, s_size, &s_config_http, &s_config_wifi, &s_config_light);
-    
+
     gpio_led_init();
 
-    gpio_cpu_init();
+    gpio_74ls165_init();
+
+    gpio_74ls595_init();
 
     ESP_LOGI(TAG, "----------------------end------------------------------");
 }

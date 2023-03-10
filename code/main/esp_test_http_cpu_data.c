@@ -7,34 +7,9 @@
 #include "esp_test_http_cpu_data.h"
 
 static uint g_init = 0;
-static uint g_clk  = 0;
-static uint g_int0 = 0;
-static uint g_int1 = 0;
-
-void http_cpu_set_data()
-{
-    gpio_cpu_set_data(0);
-    gpio_cpu_set_data(0);
-    gpio_cpu_set_data(0);
-    gpio_cpu_set_data(1);
-
-    gpio_cpu_set_data(0);
-    gpio_cpu_set_data(0);
-    gpio_cpu_set_data(1);
-    gpio_cpu_set_data(0);
-
-    gpio_cpu_set_data(0);
-    gpio_cpu_set_data(0);
-    gpio_cpu_set_data(1);
-    gpio_cpu_set_data(1);
-
-    gpio_cpu_set_data(0);
-    gpio_cpu_set_data(g_int0);
-    gpio_cpu_set_data(g_int1);
-    gpio_cpu_set_data(g_clk);
-
-    gpio_cpu_out_data();
-}
+static uint g_clk  = 0; // 心跳
+static uint g_int0 = 0; // 中断0
+static uint g_int1 = 0; // 中断1
 
 /**
  * \brief      CPU页面数据
@@ -70,7 +45,6 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
     if (!g_init)
     {
         g_init = true;
-        http_cpu_set_data();
     }
 
     if (2 != clk) // 发送数据
@@ -81,55 +55,52 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
 
         // led灯
         gpio_led(!clk);
-
-        // 输出数据
-        http_cpu_set_data();
     }
 
     // 载入数据
-    gpio_cpu_load_data();
+    gpio_74ls165_load_data();
 
-    uint mi_addr_curr = gpio_cpu_get_data(12);
-    uint mi_addr_next = gpio_cpu_get_data(12);
-    uint mi_addr_true = gpio_cpu_get_data(12);
+    uint mi_addr_curr = 0;//gpio_74ls165_get_data(12);
+    uint mi_addr_next = 0;//gpio_74ls165_get_data(12);
+    uint mi_addr_true = 0;//gpio_74ls165_get_data(12);
 
-    uint bus_data     = gpio_cpu_get_data(8);
-    uint bus_addr     = gpio_cpu_get_data(16);
-    uint bus_alu      = gpio_cpu_get_data(8);
+    uint bus_data     = 0;//gpio_74ls165_get_data(8);
+    uint bus_addr     = gpio_74ls165_get_data(16);
+    uint bus_alu      = 0;//gpio_74ls165_get_data(8);
 
-    uint sc           = 0;//gpio_cpu_get_data(3);
-    uint sd           = 1;//gpio_cpu_get_data(3);
-    uint ss           = 2;//gpio_cpu_get_data(3);
-    uint rp           = 3;//gpio_cpu_get_data(3);
-    uint rs           = 4;//gpio_cpu_get_data(3);
-    uint ra           = 5;//gpio_cpu_get_data(3);
-    uint rb           = 6;//gpio_cpu_get_data(3);
-    uint rc           = 7;//gpio_cpu_get_data(3);
-    uint rd           = rand()%8;//gpio_cpu_get_data(3);
-    uint mem          = rand()%8;//gpio_cpu_get_data(3);
-    uint alu          = gpio_cpu_get_data(7);
+    uint sc           = 0;//gpio_74ls165_get_data(3);
+    uint sd           = 1;//gpio_74ls165_get_data(3);
+    uint ss           = 2;//gpio_74ls165_get_data(3);
+    uint rp           = 3;//gpio_74ls165_get_data(3);
+    uint rs           = 4;//gpio_74ls165_get_data(3);
+    uint ra           = 5;//gpio_74ls165_get_data(3);
+    uint rb           = 6;//gpio_74ls165_get_data(3);
+    uint rc           = 7;//gpio_74ls165_get_data(3);
+    uint rd           = rand()%8;//gpio_74ls165_get_data(3);
+    uint mem          = rand()%8;//gpio_74ls165_get_data(3);
+    uint alu          = 0;//gpio_74ls165_get_data(7);
 
-    uint chk_int      = gpio_cpu_get_data(1);
-    uint chk_je       = gpio_cpu_get_data(1);
-    uint chk_jne      = gpio_cpu_get_data(1);
-    uint chk_jb       = gpio_cpu_get_data(1);
-    uint chk_jbe      = gpio_cpu_get_data(1);
-    uint chk_jl       = gpio_cpu_get_data(1);
-    uint chk_jle      = gpio_cpu_get_data(1);
+    uint chk_int      = 0;//gpio_74ls165_get_data(1);
+    uint chk_je       = 0;//gpio_74ls165_get_data(1);
+    uint chk_jne      = 0;//gpio_74ls165_get_data(1);
+    uint chk_jb       = 0;//gpio_74ls165_get_data(1);
+    uint chk_jbe      = 0;//gpio_74ls165_get_data(1);
+    uint chk_jl       = 0;//gpio_74ls165_get_data(1);
+    uint chk_jle      = 0;//gpio_74ls165_get_data(1);
 
-    uint r0           = gpio_cpu_get_data(3);
-    uint r1           = gpio_cpu_get_data(3);
+    uint r0           = 0;//gpio_74ls165_get_data(3);
+    uint r1           = 0;//gpio_74ls165_get_data(3);
 
-    uint ri           = gpio_cpu_get_data(2);
-    uint rf           = gpio_cpu_get_data(2);
+    uint ri           = 0;//gpio_74ls165_get_data(2);
+    uint rf           = 0;//gpio_74ls165_get_data(2);
 
-    uint al           = gpio_cpu_get_data(2);
-    uint ah           = gpio_cpu_get_data(1);
+    uint al           = 0;//gpio_74ls165_get_data(2);
+    uint ah           = 0;//gpio_74ls165_get_data(1);
 
-    uint dev          = gpio_cpu_get_data(4);
-    uint ram          = gpio_cpu_get_data(5);
-    uint rom          = gpio_cpu_get_data(3);
-    uint sel          = gpio_cpu_get_data(2);
+    uint dev          = 0;//gpio_74ls165_get_data(4);
+    uint ram          = 0;//gpio_74ls165_get_data(5);
+    uint rom          = 0;//gpio_74ls165_get_data(3);
+    uint sel          = 0;//gpio_74ls165_get_data(2);
 
     /*
     if (al == 0 || al == 2) // al-clr=0,清空中断标记
