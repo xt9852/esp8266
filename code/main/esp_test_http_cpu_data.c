@@ -54,30 +54,30 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
         g_int1 = int1;
 
         // led灯
-        gpio_led(!clk);
+        //gpio_led(clk);
     }
 
     // 载入数据
     gpio_74ls165_load_data();
 
-    uint mi_addr_curr = 0;//gpio_74ls165_get_data(12);
+    uint mi_addr_curr = gpio_74ls165_get_data(16);
     uint mi_addr_next = 0;//gpio_74ls165_get_data(12);
     uint mi_addr_true = 0;//gpio_74ls165_get_data(12);
 
     uint bus_data     = 0;//gpio_74ls165_get_data(8);
-    uint bus_addr     = gpio_74ls165_get_data(16);
+    uint bus_addr     = 0;//gpio_74ls165_get_data(16);
     uint bus_alu      = 0;//gpio_74ls165_get_data(8);
 
     uint sc           = 0;//gpio_74ls165_get_data(3);
-    uint sd           = 1;//gpio_74ls165_get_data(3);
-    uint ss           = 2;//gpio_74ls165_get_data(3);
-    uint rp           = 3;//gpio_74ls165_get_data(3);
-    uint rs           = 4;//gpio_74ls165_get_data(3);
-    uint ra           = 5;//gpio_74ls165_get_data(3);
-    uint rb           = 6;//gpio_74ls165_get_data(3);
-    uint rc           = 7;//gpio_74ls165_get_data(3);
-    uint rd           = rand()%8;//gpio_74ls165_get_data(3);
-    uint mem          = rand()%8;//gpio_74ls165_get_data(3);
+    uint sd           = 0;//gpio_74ls165_get_data(3);
+    uint ss           = 0;//gpio_74ls165_get_data(3);
+    uint rp           = 0;//gpio_74ls165_get_data(3);
+    uint rs           = 0;//gpio_74ls165_get_data(3);
+    uint ra           = 0;//gpio_74ls165_get_data(3);
+    uint rb           = 0;//gpio_74ls165_get_data(3);
+    uint rc           = 0;//gpio_74ls165_get_data(3);
+    uint rd           = 0;//gpio_74ls165_get_data(3);
+    uint mem          = 0;//gpio_74ls165_get_data(3);
     uint alu          = 0;//gpio_74ls165_get_data(7);
 
     uint chk_int      = 0;//gpio_74ls165_get_data(1);
@@ -112,7 +112,7 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
 
     len = snprintf(content, *content_len, "{"
           "\"addr\":{\"curr\":%d,\"next\":%d,\"next_true\":%d},"
-          "\"addr_len\":{\"curr\":3,\"next\":3,\"next_true\":3},"
+          "\"addr_len\":{\"curr\":4,\"next\":3,\"next_true\":3},"
           "\"bus\":{\"alu\":%d,\"data\":%d,\"addr\":%d},"
           "\"bus_len\":{\"alu\":2,\"data\":2,\"addr\":4},"
           "\"chk\":{\"int\":%d,\"je\":%d,\"jne\":%d,\"jb\":%d,\"jbe\":%d,\"jl\":%d,\"jle\":%d},"

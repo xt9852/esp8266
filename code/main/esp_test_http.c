@@ -226,7 +226,7 @@ int http_process_client_request(int client_sock)
         ESP_LOGI(TAG, "send content_len len:%d", ret - 2);
 
         ret = send(client_sock, content, content_len, 0);   // 发送内容
-        ESP_LOGI(TAG, "send content len:%d", ret);
+        ESP_LOGI(TAG, "send content_data len:%d", ret);
 
         ESP_LOGI(TAG, "\n%s%s", head, content_len_str);
     }

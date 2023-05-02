@@ -35,7 +35,7 @@ void app_main()
 
     gpio_74ls165_init();
 
-    gpio_74ls595_init();
+    //gpio_74ls595_init();
 
     ESP_LOGI(TAG, "----------------------end------------------------------");
 }

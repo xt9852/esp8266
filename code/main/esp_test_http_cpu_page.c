@@ -65,7 +65,7 @@
         on_load('/cpu-data?clk='+clk+'&int0='+int0+'&int1='+int1);\
     }\
 </script>\
-<body onload=\"on_load('/cpu-data?clk=2&int0=0&int1=0')\">\
+<body onload=\"on_load('/cpu-data?clk=0&int0=0&int1=0')\">\
     <div>\
         <h3 id='curr'>指令当前地址:0x</h3>\
         <h3 id='next'>指令下条地址:0x</h3>\

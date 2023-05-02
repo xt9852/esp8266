@@ -106,7 +106,7 @@ void gpio_led_init()
  */
 void gpio_led(uint led)
 {
-    gpio_set_level(GPIO_ESP8266_LED, led);
+    gpio_set_level(GPIO_ESP8266_LED, !led);
 }
 
 /**
@@ -148,7 +148,7 @@ void gpio_74ls595_save(uint data)
     gpio_set_level(GPIO_74LS595_DATA,  data);
 
     gpio_set_level(GPIO_74LS595_SAVE, 1);   // 上升沿有效,保存数据并移位
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
     gpio_set_level(GPIO_74LS595_SAVE, 0);
 
     ESP_LOGI(TAG, "---------------%s--data----%d", __FUNCTION__, data);
@@ -180,8 +180,8 @@ void gpio_74ls165_init()
     gpio_init(GPIO_74LS165_NEXT, GPIO_MODE_OUTPUT);
     gpio_init(GPIO_74LS165_DATA, GPIO_MODE_INPUT);
 
-    gpio_set_level(GPIO_74LS165_LOAD, 1);   // 高电平-设置为读取模式,低电平-将并行数据存入寄存器
-    gpio_set_level(GPIO_74LS165_NEXT, 0);   // 上升沿有效
+    gpio_set_level(GPIO_74LS165_LOAD, 1);           // 高电平-设置为读取模式,低电平-将并行数据存入寄存器
+    gpio_set_level(GPIO_74LS165_NEXT, 0);           // 上升沿有效
 
     ESP_LOGI(TAG, "---------------%s--end----", __FUNCTION__);
 }
@@ -193,7 +193,6 @@ void gpio_74ls165_init()
 void gpio_74ls165_load_data()
 {
     gpio_set_level(GPIO_74LS165_LOAD, 0);
-    vTaskDelay(10 / portTICK_PERIOD_MS);
     gpio_set_level(GPIO_74LS165_LOAD, 1);
 
     ESP_LOGI(TAG, "---------------%s", __FUNCTION__);
@@ -207,22 +206,20 @@ void gpio_74ls165_load_data()
 uint gpio_74ls165_get_data(uint count)
 {
     ESP_LOGI(TAG, "---------------%s--count----%d", __FUNCTION__, count);
-    
+
     uint i;
     uint bit;
     uint data = 0;
 
     for (i = 0; i < count; i++)
     {
-        bit = gpio_get_level(GPIO_74LS165_DATA); // 读取数据
-        data = (data << 1) | bit;
+        bit = gpio_get_level(GPIO_74LS165_DATA);    // 读取数据
+        data = (bit << i) | data;
+
+        gpio_set_level(GPIO_74LS165_NEXT, 1);       // 上升沿有效,移位已存入寄存器的数据
+        gpio_set_level(GPIO_74LS165_NEXT, 0);
 
         ESP_LOGI(TAG, "---------------%s--data----%d", __FUNCTION__, bit);
-
-        gpio_set_level(GPIO_74LS165_NEXT, 1);                   // 上升沿有效,移位已存入寄存器的数据
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        gpio_set_level(GPIO_74LS165_NEXT, 0);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 
     return data;
