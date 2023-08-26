@@ -21,8 +21,6 @@ static uint  s_size;    // 缓存大小
  */
 int config_init(char *buff, uint size, p_config_http http, p_config_wifi wifi, p_config_light light)
 {
-    ESP_LOGI(TAG, "---------------%s--beg----", __FUNCTION__);
-
     s_buff = buff;
     s_size = size;
 
@@ -96,7 +94,6 @@ int config_init(char *buff, uint size, p_config_http http, p_config_wifi wifi, p
 
     config_get_data(http, wifi, light);
 
-    ESP_LOGI(TAG, "---------------%s--end----", __FUNCTION__);
     return 0;
 }
 
@@ -384,8 +381,6 @@ int config_light_get_json(const p_config_light light, char *json)
  */
 int config_get_data(p_config_http http, p_config_wifi wifi, p_config_light light)
 {
-    ESP_LOGI(TAG, "-------------------%s--beg----", __FUNCTION__);
-
     // http config
     ESP_LOGI(TAG, "--open:%s", CONFIG_HTTP_FILENAME);
 
@@ -440,7 +435,6 @@ int config_get_data(p_config_http http, p_config_wifi wifi, p_config_light light
     // light data
     config_light_get_data(s_buff, light);
 
-    ESP_LOGI(TAG, "-------------------%s--end----", __FUNCTION__);
     return 0;
 }
 
@@ -451,9 +445,7 @@ int config_get_data(p_config_http http, p_config_wifi wifi, p_config_light light
  */
 int config_put_http(p_config_http http)
 {
-    ESP_LOGI(TAG, "-------------------%s--beg----", __FUNCTION__);
-
-    ESP_LOGI(TAG, "--update:%s", CONFIG_HTTP_FILENAME);
+    ESP_LOGI(TAG, "update:%s", CONFIG_HTTP_FILENAME);
 
     config_http_get_json(http, s_buff);
 
@@ -468,7 +460,6 @@ int config_put_http(p_config_http http)
     fwrite(s_buff, strlen(s_buff), 1, fp);
     fclose(fp);
 
-    ESP_LOGI(TAG, "-------------------%s--end----", __FUNCTION__);
     return 0;
 }
 
@@ -479,9 +470,7 @@ int config_put_http(p_config_http http)
  */
 int config_put_wifi(p_config_wifi wifi)
 {
-    ESP_LOGI(TAG, "-------------------%s--beg----", __FUNCTION__);
-
-    ESP_LOGI(TAG, "--update:%s", CONFIG_WIFI_FILENAME);
+    ESP_LOGI(TAG, "update:%s", CONFIG_WIFI_FILENAME);
 
     config_wifi_get_json(wifi, s_buff);
 
@@ -496,7 +485,6 @@ int config_put_wifi(p_config_wifi wifi)
     fwrite(s_buff, strlen(s_buff), 1, fp);
     fclose(fp);
 
-    ESP_LOGI(TAG, "-------------------%s--end----", __FUNCTION__);
     return 0;
 }
 
@@ -507,9 +495,7 @@ int config_put_wifi(p_config_wifi wifi)
  */
 int config_put_light(p_config_light light)
 {
-    ESP_LOGI(TAG, "-------------------%s--beg----", __FUNCTION__);
-
-    ESP_LOGI(TAG, "--update:%s", CONFIG_LIGHT_FILENAME);
+    ESP_LOGI(TAG, "update:%s", CONFIG_LIGHT_FILENAME);
 
     config_light_get_json(light, s_buff);
 
@@ -524,6 +510,5 @@ int config_put_light(p_config_light light)
     fwrite(s_buff, strlen(s_buff), 1, fp);
     fclose(fp);
 
-    ESP_LOGI(TAG, "-------------------%s--end----", __FUNCTION__);
     return 0;
 }

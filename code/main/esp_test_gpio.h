@@ -3,9 +3,10 @@
 
 /**
  * \brief      初始化NodeMCU板载led灯
+ * \param[in]  uint shine 闪
  * \return     无
  */
-void gpio_led_init();
+void gpio_led_init(uint shine);
 
 /**
  * \brief      led灯

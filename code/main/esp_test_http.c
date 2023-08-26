@@ -22,11 +22,11 @@
 #define HTTP_HEAD_404   "HTTP/1.1 404 Not Found\nContent-Type: text/html\nContent-Length: "
 #define HTTP_FILE_404   "404"
 
-static char          *s_buff;
-static uint           s_size;
-static p_config_http  s_http;
-static p_config_wifi  s_wifi;
-static p_config_light s_light;
+static char          *g_buff;
+static uint           g_size;
+static p_config_http  g_http;
+static p_config_wifi  g_wifi;
+static p_config_light g_light;
 
 
 /**
@@ -130,9 +130,9 @@ char* http_get_arg(char *uri)
  */
 int http_process_client_request(int client_sock)
 {
-    ESP_LOGI(TAG, "--------------------%s--beg----", __FUNCTION__);
+    ESP_LOGI(TAG, "--%s--beg", __FUNCTION__);
 
-    int data_len = recv(client_sock, s_buff, s_size, 0);
+    int data_len = recv(client_sock, g_buff, g_size, 0);
 
     if (data_len < 0)
     {
@@ -148,21 +148,21 @@ int http_process_client_request(int client_sock)
     {
         ESP_LOGI(TAG, "sock %d Recv data len:%d", client_sock, data_len);
 
-        s_buff[data_len] = 0;
+        g_buff[data_len] = 0;
 
-        if (0 != strncmp(s_buff, "GET ", 4))
+        if (0 != strncmp(g_buff, "GET ", 4))
         {
             ESP_LOGI(TAG, "request is not GET");
             return 1;
         }
 
-        ESP_LOGI(TAG, "\n%s", s_buff);
+        ESP_LOGI(TAG, "\n%s", g_buff);
 
         int ret = 404;
-        char *uri = &s_buff[4];
+        char *uri = &g_buff[4];
         char *arg = http_get_arg(uri);
-        char *content = s_buff;
-        uint content_len = s_size;
+        char *content = g_buff;
+        uint content_len = g_size;
 
         if (0 == strcmp(uri, "/"))
         {
@@ -178,15 +178,15 @@ int http_process_client_request(int client_sock)
         }
         else if (0 == strcmp(uri, "/cfg-http"))
         {
-            ret = http_cfg_http(arg, s_http, content, &content_len);
+            ret = http_cfg_http(arg, g_http, content, &content_len);
         }
         else if (0 == strcmp(uri, "/cfg-wifi"))
         {
-            ret = http_cfg_wifi(arg, s_wifi, content, &content_len);
+            ret = http_cfg_wifi(arg, g_wifi, content, &content_len);
         }
         else if (0 == strcmp(uri, "/cfg-light"))
         {
-            ret = http_cfg_light(arg, s_light, content, &content_len);
+            ret = http_cfg_light(arg, g_light, content, &content_len);
         }
         else if (0 == strcmp(uri, "/reboot"))
         {
@@ -231,7 +231,7 @@ int http_process_client_request(int client_sock)
         ESP_LOGI(TAG, "\n%s%s", head, content_len_str);
     }
 
-    ESP_LOGI(TAG, "--------------------%s--end----", __FUNCTION__);
+    ESP_LOGI(TAG, "--%s--end", __FUNCTION__);
     return 0;
 }
 
@@ -331,11 +331,11 @@ static void http_server_task(void *pvParameters)
  */
 int http_init(char *buff, uint size, p_config_http http, p_config_wifi wifi, p_config_light light)
 {
-    s_buff  = buff;
-    s_size  = size;
-    s_http  = http;
-    s_wifi  = wifi;
-    s_light = light;
+    g_buff  = buff;
+    g_size  = size;
+    g_http  = http;
+    g_wifi  = wifi;
+    g_light = light;
 
     xTaskCreate(http_server_task, "http_server", 4096, http, 5, NULL);
     return 0;

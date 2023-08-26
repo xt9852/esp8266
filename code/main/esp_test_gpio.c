@@ -30,8 +30,11 @@
 // 当ESP8266启动时GPIO1,3,9,10,16为3.3V高电平
 // GPIO6-11通常连接到ESP8266板中的flash芯片.因此,不建议使用这些引脚
 // GPIO2连接板载LED,以反转逻辑工作
+// GPIO只可下拉,其它只可上拉
 // ADC0模拟量输入,最大输入电压为0到1V
 // RST被拉低时,ESP8266复位
+
+int led = 1;
 
 #define GPIO_ESP8266_LED    2   // esp8266上的led灯
 
@@ -50,21 +53,60 @@
 
 /**
  * \brief      任务回调函数
- * \param[in]  void *pvParameters  参数
+ * \param[in]  void *param  参数
  * \return     无
-
-static void gpio_task(void *pvParameters)
+*/
+static void gpio_task(void *param)
 {
     while (1)
     {
-        gpio_set_level(GPIO_ESP8266_LED, 0);    // 点亮
-        vTaskDelay(1000 / portTICK_PERIOD_MS);  // 延时1秒
-        gpio_set_level(GPIO_ESP8266_LED, 1);    // 熄灭
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        led = !led;
+        gpio_set_level(GPIO_ESP8266_LED, led);  // 0-点亮,1-熄灭
+        vTaskDelay(pdMS_TO_TICKS(1000));        // 延时1秒
     }
 
     vTaskDelete(NULL);
-}*/
+}
+
+/**
+ * \brief      中断回调函数,不能使用ESP_LOGI
+ * \param[in]  void *param  参数
+ * \return     无
+*/
+static void gpio_isr_hander(void *param)
+{
+    gpio_set_level(GPIO_ESP8266_LED, led);
+    led = !led;
+}
+
+/**
+ * \brief      初始化NodeMCU板载中断
+ * \param[in]  int id           gpio ID
+ * \param[in]  int intr_type    中断触发方式
+ * \param[in]  int up           上拉
+ * \return     无
+ */
+void gpio_intr_init(int id, int intr_type, int up)
+{
+    // GPIO_INTR_DISABLE    不中断
+    // GPIO_INTR_POSEDGE    上升沿触发
+    // GPIO_INTR_NEGEDGE    下降沿触发
+    // GPIO_INTR_ANYEDGE    双边沿触发
+    // GPIO_INTR_LOW_LEVEL  低电平触发
+    // GPIO_INTR_HIGH_LEVEL 高电平触发
+    // GPIO_INTR_MAX
+
+    gpio_config_t cfg = { 0 };
+    cfg.mode = GPIO_MODE_INPUT;         // 模式:GPIO_MODE_INPUT,GPIO_MODE_OUTPUT
+    cfg.intr_type = intr_type;          // 中断:
+    cfg.pull_up_en = up;                // 上拉
+    cfg.pull_down_en = !up;             // 下拉
+    cfg.pin_bit_mask = (1ULL << id);    // gpio ID
+    gpio_config(&cfg);
+
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(id, gpio_isr_hander, (void*)id);
+}
 
 /**
  * \brief      初始化GPIO
@@ -74,29 +116,32 @@ static void gpio_task(void *pvParameters)
  */
 void gpio_init(int id, int mode)
 {
-    gpio_config_t gpio_conf;
-    gpio_conf.pin_bit_mask = (1ULL << id);      // gpio ID
-    gpio_conf.mode = mode;                      // 模式:GPIO_MODE_INPUT,GPIO_MODE_OUTPUT
-    gpio_conf.pull_up_en = 0;                   // 不上拉
-    gpio_conf.pull_down_en = 0;                 // 不下拉
-    gpio_conf.intr_type = GPIO_INTR_DISABLE;    // 禁止中断
-    gpio_config(&gpio_conf);
+    gpio_config_t cfg = { 0 };
+    cfg.mode = mode;                      // 模式:GPIO_MODE_INPUT,GPIO_MODE_OUTPUT
+    cfg.intr_type = GPIO_INTR_DISABLE;    // 禁止中断
+    cfg.pull_up_en = 0;                   // 不上拉
+    cfg.pull_down_en = 0;                 // 不下拉
+    cfg.pin_bit_mask = (1ULL << id);      // gpio ID
+    gpio_config(&cfg);
 }
 
 /**
  * \brief      初始化NodeMCU板载led灯
+ * \param[in]  uint shine 闪
  * \return     无
  */
-void gpio_led_init()
+void gpio_led_init(uint shine)
 {
-    ESP_LOGI(TAG, "---------------%s--beg----", __FUNCTION__);
-
     gpio_init(GPIO_ESP8266_LED, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_ESP8266_LED, 1);
 
-    //xTaskCreate(gpio_task, "led", 4096, NULL, 5, NULL);
-
-    ESP_LOGI(TAG, "---------------%s--end----", __FUNCTION__);
+    if (shine)
+    {
+        xTaskCreate(gpio_task, "led", 4096, NULL, 5, NULL);
+    }
+    else
+    {
+        gpio_intr_init(5, GPIO_INTR_NEGEDGE, 1);
+    }
 }
 
 /**
@@ -115,7 +160,7 @@ void gpio_led(uint led)
  */
 void gpio_74ls595_init()
 {
-    ESP_LOGI(TAG, "---------------%s--beg----", __FUNCTION__);
+    ESP_LOGI(TAG, "--%s", __FUNCTION__);
 
     gpio_init(GPIO_74LS595_DATA, GPIO_MODE_OUTPUT);
     gpio_init(GPIO_74LS595_SAVE, GPIO_MODE_OUTPUT);
@@ -134,8 +179,6 @@ void gpio_74ls595_init()
     gpio_74ls595_save(1);
 
     gpio_74ls595_output();
-
-    ESP_LOGI(TAG, "---------------%s--end----", __FUNCTION__);
 }
 
 /**
@@ -151,7 +194,7 @@ void gpio_74ls595_save(uint data)
     vTaskDelay(20 / portTICK_PERIOD_MS);
     gpio_set_level(GPIO_74LS595_SAVE, 0);
 
-    ESP_LOGI(TAG, "---------------%s--data----%d", __FUNCTION__, data);
+    ESP_LOGI(TAG, "--%s--data:%d", __FUNCTION__, data);
 }
 
 /**
@@ -165,7 +208,7 @@ void gpio_74ls595_output()
     vTaskDelay(10 / portTICK_PERIOD_MS);
     gpio_set_level(GPIO_74LS595_OUT, 0);
 
-    ESP_LOGI(TAG, "---------------%s", __FUNCTION__);
+    ESP_LOGI(TAG, "--%s", __FUNCTION__);
 }
 
 /**
@@ -174,7 +217,7 @@ void gpio_74ls595_output()
  */
 void gpio_74ls165_init()
 {
-    ESP_LOGI(TAG, "---------------%s--beg----", __FUNCTION__);
+    ESP_LOGI(TAG, "--%s", __FUNCTION__);
 
     gpio_init(GPIO_74LS165_LOAD, GPIO_MODE_OUTPUT);
     gpio_init(GPIO_74LS165_NEXT, GPIO_MODE_OUTPUT);
@@ -182,8 +225,6 @@ void gpio_74ls165_init()
 
     gpio_set_level(GPIO_74LS165_LOAD, 1);           // 高电平-设置为读取模式,低电平-将并行数据存入寄存器
     gpio_set_level(GPIO_74LS165_NEXT, 0);           // 上升沿有效
-
-    ESP_LOGI(TAG, "---------------%s--end----", __FUNCTION__);
 }
 
 /**
@@ -195,7 +236,7 @@ void gpio_74ls165_load_data()
     gpio_set_level(GPIO_74LS165_LOAD, 0);
     gpio_set_level(GPIO_74LS165_LOAD, 1);
 
-    ESP_LOGI(TAG, "---------------%s", __FUNCTION__);
+    ESP_LOGI(TAG, "--%s", __FUNCTION__);
 }
 
 /**
@@ -205,7 +246,7 @@ void gpio_74ls165_load_data()
  */
 uint gpio_74ls165_get_data(uint count)
 {
-    ESP_LOGI(TAG, "---------------%s--count----%d", __FUNCTION__, count);
+    ESP_LOGI(TAG, "--%s count:%d", __FUNCTION__, count);
 
     uint i;
     uint bit;
@@ -219,7 +260,7 @@ uint gpio_74ls165_get_data(uint count)
         gpio_set_level(GPIO_74LS165_NEXT, 1);       // 上升沿有效,移位已存入寄存器的数据
         gpio_set_level(GPIO_74LS165_NEXT, 0);
 
-        ESP_LOGI(TAG, "---------------%s--data----%d", __FUNCTION__, bit);
+        ESP_LOGI(TAG, "--%s data:%d", __FUNCTION__, bit);
     }
 
     return data;
