@@ -60,7 +60,7 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
     // 载入数据
     gpio_74ls165_load_data();
 
-    uint mi_addr_curr = gpio_74ls165_get_data(16);
+    uint mi_addr_curr = gpio_74ls165_get_data(8);
     uint mi_addr_next = 0;//gpio_74ls165_get_data(12);
     uint mi_addr_true = 0;//gpio_74ls165_get_data(12);
 

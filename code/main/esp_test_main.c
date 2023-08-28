@@ -29,7 +29,7 @@ void app_main()
     http_init(g_buff, g_size, &g_config_http, &g_config_wifi, &g_config_light);
 
     gpio_led_init(0);
-    //gpio_74ls165_init();
+    gpio_74ls165_init();
     //gpio_74ls595_init();
 
     ESP_LOGI(TAG, "--------------------------------------");
