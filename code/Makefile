@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := esp_test
+PROJECT_NAME := esp_app
 
 include $(IDF_PATH)/make/project.mk
 

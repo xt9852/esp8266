@@ -1,12 +1,31 @@
-# ESP8266
-> * 地址: https://github.com/xt9852/esp8266-test
-
-## 软硬件环境
+## 搭建Win7开发环境
 > * 硬件: 使用nodeMCU模块，此模块使用的是esp12f芯片
 > * 软件: 使用RTOS的SDK进行开发
-> * 开发环境: Win10+Ubuntu20.04
+> * 1.下载msys32工具链: https://dl.espressif.com/dl/esp32_win32_msys2_environment_and_toolchain-20181001.zip
+> * 2.下载交叉编译工具: https://dl.espressif.com/dl/xtensa-lx106-elf-gcc8_4_0-esp-2020r3-win32.zip
+> * 3.解压文件2个文件
+> * 4.进入目录: esp32_win32_msys2_environment_and_toolchain-20181001\msys32\etc\profile.d
+> * 6.编辑文件: esp32_toolchain.sh
+> 文件中已经配置好了esp32的交叉编译环境变量,需增加esp8266和SDK
+> 例:export PATH="$PATH:/opt/xtensa-lx106-elf/bin"
+> 例:export IDF_PATH="/D:/4.backup/coding/ESP8266_RTOS_SDK-v3.4"
+> * 4.执行命令: mingw32.exe，弹出的窗口为MINGW32环境
 
-## 搭建开发环境
+## 编译错误
+> * 1.错误: Makefile:8: /make/project.mk: 没有那个文件或目录，解决方法:ESP8266_RTOS_SDK-v3.4目录下多了一层ESP8266_RTOS_SDK,将这一层去除即可
+> * 2.错误: The following Python requirements are not satisfied: click>=5.0 pyelftools>=0.22，解决方法: python -m pip install --user -r $IDF_PATH/requirements.txt
+
+python -m pip install --upgrade pip
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade pip
+python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --upgrade setuptools
+
+ModuleNotFoundError: No module named '_sysconfigdata__mingw32_nt-6'           mingw32\lib\python2.7\_sysconfigdata.py
+
+
+## 搭建Win10+Ubuntu20.04开发环境
+> * 硬件: 使用nodeMCU模块，此模块使用的是esp12f芯片
+> * 软件: 使用RTOS的SDK进行开发
 > * 1.进入目录: cd ~
 > * 2.创建目录: mkdir esp
 > * 3.进入目录: cd esp
