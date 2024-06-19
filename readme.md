@@ -1,5 +1,6 @@
 #### ESP12-F
 - 载有Tensilica公司xtensa系列L106超低功耗32位微型MCU
+
 |参数|数值|
 |:|:|
 |物理内存|**96KB(0x18000)**的数据内存, **64KB(0x10000)**的指令内存|
@@ -15,6 +16,7 @@
 
 #### 启动模式
 ESP8266 Reset 后, 通过判断如下管脚的状态来决定启动模式:
+
 |GPIO15|GPIO0|GPIO2|模式|说明|
 |:|:|:|:|:|
 |L|L|H|UART|串口刷机|
@@ -36,6 +38,7 @@ tail 4
 chksum 0xf8
 csum 0xf8
 ```
+
 #### ESP8266启动过程
 > **片内 Bootloader**
 在没有外置 SPI Flash 的情形下，ESP8266 只需要几个外围支持元件（晶振、电容、电阻），也能启动，其片内有 ROM，带一个很小的 XTOS（xtensa 提供的最小系统，类似PC机的BIOS）
@@ -56,6 +59,7 @@ csum 0xf8
 
 #### BIN文件
 - bin文件由elf文件转化而来
+
 |位置|大小(字节)|说明|
 |:|:|:|
 |0x00|1|固定E9|
@@ -108,6 +112,7 @@ Offset      0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F
 00000080   AA 50 00 11 00 00 11 00  00 00 0F 00 6F 74 61 5F   狿..........ota_
 00000090   31 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   1...............
 ```
+
 |Type|0x值|
 |:|:|
 |app|0|
@@ -133,12 +138,12 @@ Offset      0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F
 |data|ota_7|17|
 |data|ota_8|18|
 |data|ota_9|19|
-|data|ota_a|1a|
-|data|ota_b|1b|
-|data|ota_c|1c|
-|data|ota_d|1d|
-|data|ota_e|1e|
-|data|ota_f|1f|
+|data|ota_10|1a|
+|data|ota_11|1b|
+|data|ota_12|1c|
+|data|ota_13|1d|
+|data|ota_14|1e|
+|data|ota_15|1f|
 |data|esphttpd|80|
 |data|fat|81|
 |data|spiffs|82|
