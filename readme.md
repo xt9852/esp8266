@@ -1,14 +1,14 @@
 #### ESP12-F
 - 载有Tensilica公司xtensa系列L106超低功耗32位微型MCU
 
-|参数|数值|
-|:|:|
-|物理内存|**96KB(0x18000)**的数据内存, **64KB(0x10000)**的指令内存|
-|数据内存地址|**0x3FFE8000 ~ 0x3FFFFFFF**|
-|指令内存地址|**0x40100000 ~ 0x4010FFFF**|
-|Flash|**4MB**|
-|Flash模式|**QIO**|
-|晶振|**26MHz**|
+参数|数值
+:|:
+物理内存|**96KB(0x18000)**的数据内存, **64KB(0x10000)**的指令内存
+数据内存地址|**0x3FFE8000 ~ 0x3FFFFFFF**
+指令内存地址|**0x40100000 ~ 0x4010FFFF**
+Flash|**4MB**
+Flash模式|**QIO**
+晶振|**26MHz**
 
 #### 缓存
 - 缓存(iROM): 因为内存有限, 所以就不能把所有的数据都载入内存, 只能是先载入必要的数据，其他数据保留在Flash中，在需要的时候读取
@@ -17,11 +17,11 @@
 #### 启动模式
 ESP8266 Reset 后, 通过判断如下管脚的状态来决定启动模式:
 
-|GPIO15|GPIO0|GPIO2|模式|说明|
-|:|:|:|:|:|
-|L|L|H|UART|串口刷机|
-|L|H|H|Flash|SPI Flash 正常启动|
-|H|x|x|SDIO|SD-card 启动|
+GPIO15|GPIO0|GPIO2|模式|说明
+:|:|:|:|:
+L|L|H|UART|串口刷机
+L|H|H|Flash|SPI Flash 正常启动
+H|x|x|SDIO|SD-card 启动
 
 启动时串口(波特率74880)输出的boot mode:(x, y),x的低3位对应{GPIO15, 0, 2}
 
@@ -60,20 +60,20 @@ csum 0xf8
 #### BIN文件
 - bin文件由elf文件转化而来
 
-|位置|大小(字节)|说明|
-|:|:|:|
-|0x00|1|固定E9|
-|0x01|1|段数量|
-|0x02|1|FLASH模式:QIO,QOUT,DIO,DOUT,FAST_READ,SLOW_READ|
-|0x03|1|FLASH大小和频率<br>大小<br>V1: 512K, 256K, 1M, 2M, 4M, 2M-c1, 4M-c1, 8M-8, 16M-9<br>V3: 1MB, 2MB, 4MB, 8MB, 16MB<br>频率<br>40M, 26M, 20M, 80M|
-|0x04|4|入口地址|
-|0x05|4|段1地址|
-|0x06|4|段1长度(包括4字节对齐数据长)|
-|0x07|段长度|段1数据|
-||0~3|4字节对齐(填充0x00)|
-|...|...|段n|
-||1~16|16字节对齐(填充0x00, 最后一位放段数据的校验码(1字节))|
-||32|上面全部数据SHA256校验码|
+位置|大小(字节)|说明
+:|:|:
+0x00|1|固定E9
+0x01|1|段数量
+0x02|1|FLASH模式:QIO,QOUT,DIO,DOUT,FAST_READ,SLOW_READ
+0x03|1|FLASH大小和频率<br>大小<br>V1: 512K, 256K, 1M, 2M, 4M, 2M-c1, 4M-c1, 8M-8, 16M-9<br>V3: 1MB, 2MB, 4MB, 8MB, 16MB<br>频率<br>40M, 26M, 20M, 80M
+0x04|4|入口地址
+0x05|4|段1地址
+0x06|4|段1长度(包括4字节对齐数据长)
+0x07|段长度|段1数据
+|0~3|4字节对齐(填充0x00)
+...|...|段n
+|1~16|16字节对齐(填充0x00, 最后一位放段数据的校验码(1字节))
+|32|上面全部数据SHA256校验码
 
 #### 分区表文件
 - 分区说明文件: ESP8266_RTOS_SDK-v3.4/components/partition_table/partitions_two_ota.csv
@@ -113,40 +113,40 @@ Offset      0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F
 00000090   31 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   1...............
 ```
 
-|Type|0x值|
-|:|:|
-|app|0|
-|data|1|
+Type|0x值
+:|:
+app|0
+data|1
 
-|Type|SubType|0x值|
-|:|:|:|
-|app|factory|00|
-|app|test|20|
-|data|ota|00|
-|data|phy|01|
-|data|nvs|02|
-|data|coredump|03|
-|data|nvs_keys|04|
-|data|efuse|05|
-|data|ota_0|10|
-|data|ota_1|11|
-|data|ota_2|12|
-|data|ota_3|13|
-|data|ota_4|14|
-|data|ota_5|15|
-|data|ota_6|16|
-|data|ota_7|17|
-|data|ota_8|18|
-|data|ota_9|19|
-|data|ota_10|1a|
-|data|ota_11|1b|
-|data|ota_12|1c|
-|data|ota_13|1d|
-|data|ota_14|1e|
-|data|ota_15|1f|
-|data|esphttpd|80|
-|data|fat|81|
-|data|spiffs|82|
+Type|SubType|0x值
+:|:|:
+app|factory|00
+app|test|20
+data|ota|00
+data|phy|01
+data|nvs|02
+data|coredump|03
+data|nvs_keys|04
+data|efuse|05
+data|ota_0|10
+data|ota_1|11
+data|ota_2|12
+data|ota_3|13
+data|ota_4|14
+data|ota_5|15
+data|ota_6|16
+data|ota_7|17
+data|ota_8|18
+data|ota_9|19
+data|ota_10|1a
+data|ota_11|1b
+data|ota_12|1c
+data|ota_13|1d
+data|ota_14|1e
+data|ota_15|1f
+data|esphttpd|80
+data|fat|81
+data|spiffs|82
 
 #### OTA数据
 ota_data_initial.bin,大小8192(8KB,由分区表决定其大小),全为FF
