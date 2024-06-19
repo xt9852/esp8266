@@ -2,7 +2,7 @@
 - 载有Tensilica公司xtensa系列L106超低功耗32位微型MCU
 
 参数|数值
-:|:
+-|-
 物理内存|**96KB(0x18000)**的数据内存, **64KB(0x10000)**的指令内存
 数据内存地址|**0x3FFE8000 ~ 0x3FFFFFFF**
 指令内存地址|**0x40100000 ~ 0x4010FFFF**
@@ -18,7 +18,7 @@ Flash模式|**QIO**
 ESP8266 Reset 后, 通过判断如下管脚的状态来决定启动模式:
 
 GPIO15|GPIO0|GPIO2|模式|说明
-:|:|:|:|:
+-|-|-|-|-
 L|L|H|UART|串口刷机
 L|H|H|Flash|SPI Flash 正常启动
 H|x|x|SDIO|SD-card 启动
@@ -61,7 +61,7 @@ csum 0xf8
 - bin文件由elf文件转化而来
 
 位置|大小(字节)|说明
-:|:|:
+-|-|-
 0x00|1|固定E9
 0x01|1|段数量
 0x02|1|FLASH模式:QIO,QOUT,DIO,DOUT,FAST_READ,SLOW_READ
@@ -114,12 +114,12 @@ Offset      0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F
 ```
 
 Type|0x值
-:|:
+-|-
 app|0
 data|1
 
 Type|SubType|0x值
-:|:|:
+-|-|-
 app|factory|00
 app|test|20
 data|ota|00
