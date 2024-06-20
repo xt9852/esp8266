@@ -1,4 +1,4 @@
-#### ESP12-F
+####
 - 载有Tensilica公司xtensa系列L106超低功耗32位微型MCU
 
 参数|数值
@@ -16,6 +16,7 @@ Flash模式|**QIO**
 
 #### 启动模式
 ESP8266 Reset 后, 通过判断如下管脚的状态来决定启动模式:
+按住FLASH键再按reset键,进入串口刷机
 
 GPIO15|GPIO0|GPIO2|模式|说明
 -|-|-|-|-
@@ -23,6 +24,18 @@ L|L|H|UART|串口刷机
 L|H|H|Flash|SPI Flash 正常启动
 H|x|x|SDIO|SD-card 启动
 
+- NodeMCU串口控制启动
+>NodeMCU将串口的RTS(Request To Send)和DTR(Data Terminal Ready )连接到芯片EN和GPIO0这样就可以控制模块是否重启啦, 是个很好的设计
+RTS 连接  EN, 低电平复位
+DTR 连接 GPIO0, 低电平进入下载模式
+``` cpp
+EscapeCommFunction(g_com, SETRTS);
+EscapeCommFunction(g_com, CLRRTS);
+EscapeCommFunction(g_com, SETDTR);
+Sleep(100);
+EscapeCommFunction(g_com, CLRDTR);
+EscapeCommFunction(g_com, CLRRTS);
+```
 启动时串口(波特率74880)输出的boot mode:(x, y),x的低3位对应{GPIO15, 0, 2}
 
 ``` python
@@ -88,17 +101,19 @@ ota_1,    0,    ota_1,   0x110000,0xF0000
 ```
 - 有OTA的FLASH布局:
 ``` python
-BootLoader     0x000000 0x08000    32K
-PartitionTable 0x008000 0x01000     4K
-WiFi data nvs  0x009000 0x04000    16K
-OTA data       0x00d000 0x02000     8K
-RF data        0x00f000 0x01000     4K
-App            0x010000 0xf0000   960K
-App            0x110000 0xf0000   960K
+BootLoader     0x000000 0x008000    32K
+PartitionTable 0x008000 0x001000     4K
+WiFi data nvs  0x009000 0x004000    16K
+OTA data       0x00d000 0x002000     8K
+RF data        0x00f000 0x001000     4K
+App            0x010000 0x0f0000   960K
+null           0x100000 0x010000    64K
+App            0x110000 0x0f0000   960K
+null           0x200000 0x200000     2M
 ```
 - 分区数据文件: partitions_two_ota.bin
 > 每条信息32字节=AA 50(2字节) + Type(1字节) + SubType(1字节) + Offset(4字节) + Length(4字节) + Usage(20字节)
-最多96条3KB,其余空间全为FF,ota_**最多16条
+最多96条3KB,其余空间全为FF,ota_xx最多16条
 ``` python
 Offset      0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F
 00000000   AA 50 01 02 00 90 00 00  00 40 00 00 6E 76 73 00   狿.......@..nvs.
@@ -150,6 +165,71 @@ data|spiffs|82
 
 #### OTA数据
 ota_data_initial.bin,大小8192(8KB,由分区表决定其大小),全为FF
+
+#### 烧录
+- Loader
+> ESP8266 ROM Loader  固定在 ROM 中, 功能有限
+ESP8266 Stub Loader 由 ROM Loader 加载到 RAM 中, 功能可扩展
+
+- 烧录流程
+> 流程为一命令一应答的方法
+1, 拉低GPIO0引脚复位自重启进入下载模式
+2, 发送同步信号
+3, 写入Stub Loader
+4, 烧写固件
+
+- SLIP协议
+> 数据的第一个和最后一个字符必须是0xC0
+如果发送的数据中含有0xC0, 则将0xC0替换为0xDB,0xDC两个字符发送
+如果发送的数据中含有0xDB, 则将0xDB替换为0xDB,0xDD两个字符发送
+
+- 命令包
+位置|长度|说明
+-|-|-
+0x00|1|固定0x00
+0x01|1|命令代码
+0x02|2|数据长度
+0x04|4|数据校验和,发送命令时0x00
+0x08|数据长度|数据
+
+- 应答包
+位置|长度|说明
+-|-|-
+0x00|1|固定0x01
+0x01|1|响应代码
+0x02|2|数据长度
+0x04|4|数据值,内存读取命令应答使用
+0x08|数据长度|应答的状态:0-成功,1-失败
+
+- 命令
+ESP8266 ROM Loader和ESP8266 Stub Loader都有的命令,各字段为4字节
+值|说明|字段1|字段2|字段3|字段4|字段5|字段6
+-|-|-|-|-|-|-|-
+0x02|烧录开始|擦除大小|包数量|包内数据大小|地址
+0x03|烧录数据|数据大小|序列号|0x00|数据校验码|
+0x04|烧录完成|0-重启<br>1-进入用户代码|
+0x05|内存写开始|总大小|数据包数量|包内数据大小|地址
+0x06|内存写结束|执行标记|入口地址|
+0x07|内存写数据|数据大小|序列号|0x00|数据校验码
+0x08|同步|0x07,0x07,0x12,0x20|0x55*32
+0x09|内存写入|地址|值|掩码|延时(毫秒)
+0x0a|内存读取|地址4字节
+0x0b|设置FLASH参数|id|总在大小|块大小|扇区大小|页大小|状态掩码
+0x0d|Flash测试|0
+0x0f|设置串口|波特率|0-ROM loader,其它为stub loader.
+0x10|压缩烧录开始|压缩后大小|包数量|数据大小|地址
+0x11|压缩烧录数据|数据大小|序列号|0x00|数据校验码|
+0x12|压缩烧录结束|0-重启<br>1-进入用户代码|
+0x13|计算MD5|地址|大小|0|0|
+
+ESP8266 Stub Loader独有的命令,各字段为4字节
+值|说明|字段1|字段2|字段3|字段4|字段5|字段6
+-|-|-|-|-|-|-|-
+0xd0|擦除全部数据|
+0xd1|擦除数据|地址|大小(扇区倍数)
+0xd2|读取数据|地址|大小|扇区大小|包大小|最大未确认数据包数
+0xd3|运行用户代码|
+
 
 #### bootloader代码
 ``` python
