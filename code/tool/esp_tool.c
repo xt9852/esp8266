@@ -12,9 +12,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <Windows.h>
+#include "cJSON.h"
+#include "md5.h"
+#include "miniz.h"
+#include "sha256.h"
+#include "xt_base64.h"
 
+#define BUFF_SIZE      16*1024*1024
 #define CVS_TYPE_ID    "app-0,data-1"
 #define CVS_SUBTYPE_ID "factory-0,test-20,ota-00,phy-01,nvs-02,coredump-03,nvs_keys-04,efuse-05,ota_0-10,ota_1-11,ota_2-12,ota_3-13,ota_4-14,ota_5-15,ota_6-16,ota_7-17,ota_8-18,ota_9-19,ota_10-1a,ota_11-1b,ota_12-1c,ota_13-1d,ota_14-1e,ota_15-1f,esphttpd-80,fat-81,spiffs-82"
+
+#define STUB_DATA_ADDR  0x3fffaba4
+#define STUB_TEXT_ADDR  0x4010e000
+#define STUB_ENTRY_ADDR 0x4010e004
+#define STUB_TEXT       "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"
+#define STUB_DATA       "eJx10T1Lw0AYwPG7pEmaprVXHao4VHHsUhEnB086ioP0Cyh+BB0EF4ugn0BcBAcdXBz9ACK4Ojo6CFpf6IsvxUX0H3PBEOnBjyeX3PPc3ZOT6ve842SEZXvCtgOxeK/0Nq6w96D0WV/pW2KtpfRuK5pvPir9ifOnaB5qPEex1lY66Chd7/x965nnblfpg57SX69KX78pffr+tyZ28xHFQ2y9KL3M3hXeHbFfm/33iVW+bfT/56aVWbuEWfKlEMKCjQwcePBRQAljmMQ0FrCKJi4gKdCEpIikiKSIdJFFHgqjmEANGiti4JCGlThXfLb4fCHX8Iys4Rs5IzDyRsGIR/LebqKWn8gP1xdNL0ZQxjgqmEIVM5hDHQ2sYR07OMYl7sI7ycF3H9SLdE/SvUn3KN2rWHKo0rDIer6bc4JM3i5YQ7L4+y+lyf0BypxxDQ=="
 
 enum
 {
@@ -27,7 +39,7 @@ enum
     F12,                        // ESP8266型号:12F
 };
 
-typedef struct
+typedef struct _arg
 {
     unsigned int    type;       // 类型:OTA,CVS,BIN,FLASH
     unsigned int    com;        // 串口号
@@ -40,7 +52,7 @@ typedef struct
 
 } t_arg, *p_arg;
 
-typedef struct
+typedef struct _cvs
 {
     unsigned short magic;       // 0x50AA
     unsigned char  type;        // app-0,data-1
@@ -52,7 +64,7 @@ typedef struct
 
 } t_cvs, *p_cvs;
 
-typedef struct
+typedef struct _bin
 {
     unsigned char   magic;      // 固定0xE9
     unsigned char   sec_num;    // 段数量
@@ -62,22 +74,22 @@ typedef struct
 
 } t_bin, *p_bin;
 
-typedef struct
+typedef struct _sec_head
 {
     unsigned int    addr;       // 段内存地址
     unsigned int    size;       // 段大小
 
-} t_sec, *p_sec;
+} t_sec_head, *p_sec_head;
 
-typedef struct
+typedef struct _sec
 {
-    t_sec           sec;        // 段头
+    t_sec_head      head;       // 段头
     unsigned int    offset;     // 段数据在文件中的位置
     unsigned int    pad;        // 4字节对齐
 
-} t_sec_data, *p_sec_data;
+} t_sec, *p_sec;
 
-typedef struct
+typedef struct _Elf32_Ehdr
 {
 	unsigned char  e_ident[16]; // 0x7F+ELF
 	unsigned short e_type;      // 该文件的类型
@@ -95,7 +107,7 @@ typedef struct
 	unsigned short e_shstrndx;  // 包含节名称的字符串是第几个节
 } Elf32_Ehdr, *p_Elf32_Ehdr;
 
-typedef struct
+typedef struct _Elf32_Shdr
 {
     unsigned int   sh_name;     // Section name (string tbl index)
     unsigned int   sh_type;     // Section type
@@ -109,164 +121,7 @@ typedef struct
     unsigned int   sh_entsize;  // Entry size if section holds table
 } Elf32_Shdr, *p_Elf32_Shdr;
 
-static t_arg g_arg = { 0 };
-
-#define Ch(x,y,z)       (z ^ (x & (y ^ z)))
-#define Maj(x,y,z)      (((x | y) & z) | (x & y))
-#define RORc(x, y)      (((((unsigned int) (x) & 0xFFFFFFFFUL) >> (unsigned int) ((y) & 31)) | ((unsigned int) (x) << (unsigned int) (32 - ((y) & 31)))) & 0xFFFFFFFFUL)
-#define S(x, n)         RORc((x), (n))
-#define R(x, n)         (((x)&0xFFFFFFFFUL)>>(n))
-#define Sigma0(x)       (S(x, 2) ^ S(x, 13) ^ S(x, 22))
-#define Sigma1(x)       (S(x, 6) ^ S(x, 11) ^ S(x, 25))
-#define Gamma0(x)       (S(x, 7) ^ S(x, 18) ^ R(x, 3))
-#define Gamma1(x)       (S(x, 17) ^ S(x, 19) ^ R(x, 10))
-
-#define RND(a,b,c,d,e,f,g,h,i) t0 = h + Sigma1(e) + Ch(e, f, g) + K[i] + W[i]; t1 = Sigma0(a) + Maj(a, b, c);  d += t0; h  = t0 + t1;
-
-#define ESP_GET_BE32(a) ((((unsigned int) (a)[0]) << 24) | (((unsigned int) (a)[1]) << 16) | (((unsigned int) (a)[2]) << 8) | ((unsigned int) (a)[3]))
-
-#define ESP_PUT_BE32(a, val)                                                \
-    do {                                                                    \
-        (a)[0] = (unsigned char) ((((unsigned int) (val)) >> 24) & 0xff);   \
-        (a)[1] = (unsigned char) ((((unsigned int) (val)) >> 16) & 0xff);   \
-        (a)[2] = (unsigned char) ((((unsigned int) (val)) >> 8)  & 0xff);   \
-        (a)[3] = (unsigned char) ( ((unsigned int) (val))        & 0xff);   \
-    } while (0)
-
-static const unsigned int K[64] = {
-    0x428a2f98UL, 0x71374491UL, 0xb5c0fbcfUL, 0xe9b5dba5UL, 0x3956c25bUL,
-    0x59f111f1UL, 0x923f82a4UL, 0xab1c5ed5UL, 0xd807aa98UL, 0x12835b01UL,
-    0x243185beUL, 0x550c7dc3UL, 0x72be5d74UL, 0x80deb1feUL, 0x9bdc06a7UL,
-    0xc19bf174UL, 0xe49b69c1UL, 0xefbe4786UL, 0x0fc19dc6UL, 0x240ca1ccUL,
-    0x2de92c6fUL, 0x4a7484aaUL, 0x5cb0a9dcUL, 0x76f988daUL, 0x983e5152UL,
-    0xa831c66dUL, 0xb00327c8UL, 0xbf597fc7UL, 0xc6e00bf3UL, 0xd5a79147UL,
-    0x06ca6351UL, 0x14292967UL, 0x27b70a85UL, 0x2e1b2138UL, 0x4d2c6dfcUL,
-    0x53380d13UL, 0x650a7354UL, 0x766a0abbUL, 0x81c2c92eUL, 0x92722c85UL,
-    0xa2bfe8a1UL, 0xa81a664bUL, 0xc24b8b70UL, 0xc76c51a3UL, 0xd192e819UL,
-    0xd6990624UL, 0xf40e3585UL, 0x106aa070UL, 0x19a4c116UL, 0x1e376c08UL,
-    0x2748774cUL, 0x34b0bcb5UL, 0x391c0cb3UL, 0x4ed8aa4aUL, 0x5b9cca4fUL,
-    0x682e6ff3UL, 0x748f82eeUL, 0x78a5636fUL, 0x84c87814UL, 0x8cc70208UL,
-    0x90befffaUL, 0xa4506cebUL, 0xbef9a3f7UL, 0xc67178f2UL
-};
-
-typedef struct
-{
-    unsigned int    total[2];
-    unsigned int    state[8];
-    unsigned char   buffer[64];
-} esp_sha256_t;
-
-int esp_sha256_init(esp_sha256_t *ctx)
-{
-    ctx->total[0] = 0;
-    ctx->total[1] = 0;
-    ctx->state[0] = 0x6A09E667UL;
-    ctx->state[1] = 0xBB67AE85UL;
-    ctx->state[2] = 0x3C6EF372UL;
-    ctx->state[3] = 0xA54FF53AUL;
-    ctx->state[4] = 0x510E527FUL;
-    ctx->state[5] = 0x9B05688CUL;
-    ctx->state[6] = 0x1F83D9ABUL;
-    ctx->state[7] = 0x5BE0CD19UL;
-    return 0;
-}
-
-void esp_sha256_transform(esp_sha256_t *ctx, const unsigned char *buf)
-{
-    unsigned int S[8], W[64], t0, t1;
-    unsigned int t;
-    int i;
-
-    for (i = 0; i < 8; i++)
-        S[i] = ctx->state[i];
-
-    for (i = 0; i < 16; i++)
-        W[i] = ESP_GET_BE32(buf + (4 * i));
-
-    for (i = 16; i < 64; i++)
-        W[i] = Gamma1(W[i - 2]) + W[i - 7] + Gamma0(W[i - 15]) + W[i - 16];
-
-    for (i = 0; i < 64; ++i) {
-        RND(S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7], i);
-        t = S[7]; S[7] = S[6]; S[6] = S[5]; S[5] = S[4];
-        S[4] = S[3]; S[3] = S[2]; S[2] = S[1]; S[1] = S[0]; S[0] = t;
-    }
-
-    for (i = 0; i < 8; i++)
-        ctx->state[i] = ctx->state[i] + S[i];
-}
-
-int esp_sha256_update(esp_sha256_t *ctx, const void *src, size_t size)
-{
-    size_t fill;
-    unsigned int left;
-    const unsigned char *input = (const unsigned char *)src;
-
-    left = ctx->total[0] & 0x3F;
-    fill = 64 - left;
-
-    ctx->total[0] += size;
-    ctx->total[0] &= 0xFFFFFFFF;
-
-    if (ctx->total[0] < size)
-        ctx->total[1]++;
-
-    if (left && size >= fill) {
-        memcpy(ctx->buffer + left, input, fill);
-
-        esp_sha256_transform(ctx, ctx->buffer);
-
-        input += fill;
-        size  -= fill;
-        left = 0;
-    }
-
-    while (size >= 64) {
-        esp_sha256_transform(ctx, input);
-
-        input += 64;
-        size  -= 64;
-    }
-
-    if (size > 0)
-        memcpy(ctx->buffer + left, input, size);
-
-    return 0;
-}
-
-int esp_sha256_finish(esp_sha256_t *ctx)
-{
-    unsigned int used;
-    unsigned int high, low;
-
-    used = ctx->total[0] & 0x3F;
-
-    ctx->buffer[used++] = 0x80;
-
-    if (used <= 56) {
-        memset(ctx->buffer + used, 0, 56 - used);
-    } else {
-        memset(ctx->buffer + used, 0, 64 - used);
-        esp_sha256_transform(ctx, ctx->buffer);
-        memset(ctx->buffer, 0, 56);
-    }
-
-    high = (ctx->total[0] >> 29) | (ctx->total[1] <<  3);
-    low  = (ctx->total[0] <<  3);
-
-    ESP_PUT_BE32(ctx->buffer +  56, high);
-    ESP_PUT_BE32(ctx->buffer +  60, low);
-
-    esp_sha256_transform(ctx, ctx->buffer);
-    return( 0 );
-}
-
-HANDLE g_com = NULL;
-
-#pragma pack(push)
-#pragma pack(1) // 设定为1字节对齐
-
-typedef struct
+typedef struct _esp_loader_req_head
 {
     unsigned char           zero;       // 固定为0x00
     unsigned char           op;         // 命令码
@@ -275,14 +130,17 @@ typedef struct
 
 } t_esp_loader_req_head, *p_esp_loader_req_head;
 
-typedef struct
+#pragma pack(push)
+#pragma pack(1) // 设定为1字节对齐
+
+typedef struct _esp_loader_req
 {
     t_esp_loader_req_head   head;       // 命令头
-    unsigned char           data[1];    // 数据
+    unsigned int            data[1];    // 数据
 
 } t_esp_loader_req, *p_esp_loader_req;
 
-typedef struct _rsp
+typedef struct _esp_loader_rsp
 {
     unsigned char           one;        // 固定为0x01
     unsigned char           op;         // 结果
@@ -294,43 +152,108 @@ typedef struct _rsp
 
 #pragma pack(pop)
 
-void com_printf(unsigned char *data, unsigned int len)
+static t_arg g_arg = { 0 };
+
+HANDLE g_com = NULL;
+
+unsigned char com_checksum(unsigned char *data, unsigned int data_len, unsigned char checksum)
 {
-    printf("   ");
+    //unsigned char sum = 0xef;
 
-    for (unsigned int i = 0; i < 16; i++)
+    for (unsigned int i = 0; i < data_len; i++)
     {
-        printf("%2X ", i);
-
-        if ((i % 8) == 0 && 0 != i)
-        {
-            printf(" ");
-        }
+        checksum ^= data[i];
     }
 
+    return checksum;
+}
+
+int get_file_data(const char *filename, void *buf, unsigned int max_len)
+{
+    FILE *fp = NULL;
+
+    if (0 != fopen_s(&fp, filename, "rb"))
+    {
+        printf("open %s error\n", filename);
+        return -1;
+    }
+
+    printf("open %s ok\n", filename);
+
+    unsigned int len = fread(buf, 1, max_len, fp);
+
+    fclose(fp);
+
+    if (len == max_len)
+    {
+        printf("file too big\n");
+        return -2;
+    }
+
+    return len;
+}
+
+int put_file_data(const char *filename, void *buf, unsigned int len)
+{
+    FILE *fp = NULL;
+
+    if (0 != fopen_s(&fp, filename, "wb+"))
+    {
+        printf("open %s error\n", filename);
+        return -1;
+    }
+
+    printf("create %s ok\n", filename);
+
+    fwrite(buf, 1, len, fp);
+    fclose(fp);
+    return len;
+}
+
+void com_printf_data(unsigned char *data, unsigned int len)
+{
     printf("\n");
+    printf("      00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F\n");
+    printf("     --------------------------------------------------\n");
 
     for (unsigned int i = 0; i < len; i++)
     {
-        if ((i % 8) == 0 && 0 != i)
+        if ((i % 16) == 0)
+        {
+            printf("%04X|", i / 16);
+        }
+
+        if ((i % 16) == 8)
         {
             printf(" ");
         }
 
-        if ((i % 16) == 0 && 0 != i)
-        {
-            printf("\n");
-        }
+        printf(" %02x", data[i]);
 
-        if ((i % 16) == 0)
+        if ((i % 16) == 15)
         {
-            printf("%2X ", i / 16);
+            printf(" |\n");
         }
-
-        printf("%02x ", data[i]);
     }
 
-    printf("\n");
+    int pad = ((len % 16) == 0) ? 0 : (16 - len % 16);
+
+    if (pad > 0)
+    {
+        for (int i = 0; i < pad; i++)
+        {
+            printf("   ");
+        }
+
+        if (pad >= 8)
+        {
+            printf(" ");
+        }
+
+        printf(" |\n");
+    }
+
+    printf("     --------------------------------------------------\n\n");
 }
 
 HANDLE com_open(int com, int BaudRate, int ByteSize, int Parity, int StopBits, int reboot)
@@ -361,40 +284,13 @@ HANDLE com_open(int com, int BaudRate, int ByteSize, int Parity, int StopBits, i
 
 	if (!SetCommState(handle, &p))
 	{
-        printf("COM%d set (%d %d %d %d) fail\n", com, BaudRate, ByteSize, Parity, StopBits);
+        printf("COM%d set fail (%d %d %d %d)\n", com, BaudRate, ByteSize, Parity, StopBits);
         CloseHandle(handle);
         return (HANDLE)-2;
 	}
 
-    printf("COM%d open (%d %d %d %d) success\n", com, BaudRate, ByteSize, Parity, StopBits);
-/*
-	// 超时处理,单位：毫秒
-	// 总超时＝时间系数×读或写的字符数＋时间常量
-	COMMTIMEOUTS timeOuts = {0};
-	timeOuts.ReadIntervalTimeout         = 1000;    // 读间隔超时
-	timeOuts.ReadTotalTimeoutMultiplier  = 1;       // 读时间系数
-	timeOuts.ReadTotalTimeoutConstant    = 1;       // 读时间常量
-	timeOuts.WriteTotalTimeoutMultiplier = 0;       // 写时间系数
-	timeOuts.WriteTotalTimeoutConstant   = 0;       // 写时间常量
+    printf("COM%d open success (%d %d %d %d)\n", com, BaudRate, ByteSize, Parity, StopBits);
 
-    //if (!GetCommTimeouts(handle, &timeOuts))
-    //{
-    //    printf("COM%d GetCommTimeouts fail\n", com);
-    //    CloseHandle(handle);
-    //    return (HANDLE)-3;
-    //}
-
-    printf("COM%d timeout:%d %d %d %d %d\n", com,
-            timeOuts.ReadIntervalTimeout, timeOuts.ReadTotalTimeoutMultiplier, timeOuts.ReadTotalTimeoutConstant,
-            timeOuts.WriteTotalTimeoutMultiplier, timeOuts.WriteTotalTimeoutConstant);
-
-	if (!SetCommTimeouts(handle, &timeOuts))
-    {
-        printf("COM%d SetCommTimeouts fail\n", com);
-        CloseHandle(handle);
-        return (HANDLE)-4;
-    }
-*/
 	if (!PurgeComm(handle, PURGE_TXCLEAR | PURGE_RXCLEAR)) // 清空串口缓冲区
     {
         printf("COM%d PurgeComm fail\n", com);
@@ -405,126 +301,448 @@ HANDLE com_open(int com, int BaudRate, int ByteSize, int Parity, int StopBits, i
     return handle;
 }
 
-int com_send(HANDLE handle, const void *data, unsigned int len)
+void com_close(HANDLE handle)
 {
-    unsigned int   j   = 0;
-    unsigned int   num = 0;
-    unsigned char *in  = (unsigned char*)data;
-    unsigned char *out = (unsigned char*)malloc(len * 2 + 2);
+     printf("close com %d\n", (int)handle);
+     CloseHandle(handle);
+}
 
-    out[j++] = '\xc0';
+void com_reboot_to_loader(unsigned int com)
+{
+    HANDLE handle = com_open(com, 74880, 8, 0, 1, 1);
 
-    for (unsigned int i = 0; i < len; i++)
+    if (handle < 0) return;
+
+    EscapeCommFunction(handle, SETRTS); // 重启1
+    EscapeCommFunction(handle, CLRRTS); // 重启2
+    EscapeCommFunction(handle, SETDTR); // 设置GPIO,ESP8266进入到串口下载模式
+    Sleep(100);                         // 等待不能删除
+    EscapeCommFunction(handle, CLRDTR); // 清空
+    EscapeCommFunction(handle, CLRRTS); // 清空
+
+    CloseHandle(handle);
+}
+
+int com_decompress(const char *in, unsigned int in_len, unsigned char *out, unsigned int *out_len)
+{
+    printf("in_len:%d\n", in_len);
+
+    unsigned char *tmp     = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned int   tmp_len = BUFF_SIZE;
+
+    if (0 != base64_decode(in, in_len, tmp, &tmp_len))
     {
-        if (in[i] == '\xc0')
-        {
-            out[j++] = '\xdb';
-            out[j++] = '\xdc';
-        }
-        else if (in[i] == '\xdb')
-        {
-            out[j++] = '\xdb';
-            out[j++] = '\xdd';
-        }
-        else
-        {
-            out[j++] = in[i];
-        }
+        free(tmp);
+        printf("base64_decode fail\n");
+        return -1;
     }
 
-    out[j++] = '\xc0';
+    printf("base64 data len:%d\n", tmp_len);
 
-    com_printf(out, j);
+    int flags = TINFL_FLAG_PARSE_ZLIB_HEADER; // 还有数据时 |= TINFL_FLAG_HAS_MORE_INPUT
+    tinfl_decompressor inflator;
+    tinfl_init(&inflator);
 
-	if (!WriteFile(handle, out, j, &num, NULL))
-	{
-        printf("com:%d send fail %d %d\n", (int)handle, errno, GetLastError());
-		return -1;
-	}
-
-    printf("send data:%d %d %d\n", len, j, num);
-    return len;
-}
-
-typedef int (*CALLBACK_PROC)(p_esp_loader_rsp rsp, int id);
-
-int callback(p_esp_loader_rsp rsp, int id)
-{
-    printf("id:%d magic:%d op:%d data_len:%d value:%8x ret:%d\n", id, rsp->one, rsp->op, rsp->data_len, rsp->value,  rsp->data[(rsp->data_len == 2) ? 1 : 3]);
-    return 0;
-}
-
-int com_recv(HANDLE handle, void *data, unsigned int max_len, CALLBACK_PROC proc)
-{
-    int len;
-
-    printf("recv max:%d\n", max_len);
-
-	if (!ReadFile(handle, data, max_len, &len, NULL))
-	{
-        printf("COM:%d recv fail %d %d\n", (int)handle, errno, GetLastError());
-		return -1;
-	}
-
-    int j = 0;
-    char *in  = (char*)data;
-    char *out = (char*)data;
-
-    com_printf(in, len);
-
-    if ('\xc0' != in[0] || '\xc0' != in[len - 1])
+    if (0 != tinfl_decompress(&inflator, tmp, &tmp_len, out, out, out_len, flags))
     {
-        printf("head end not 0xc0 len:%d\n", len);
+        free(tmp);
+        printf("tinfl_decompress fail\n");
         return -2;
     }
 
-    for (int i = 0; i < len; i++)
+    free(tmp);
+    printf("file data len:%d\n", *out_len);
+    return 0;
+}
+
+int com_send(HANDLE handle, unsigned char *buf, unsigned int len)
+{
+    unsigned int      tmp;
+    unsigned int      num;
+    unsigned char    *ptr;
+    unsigned char    out[5] = { 0xc0, 0xdb, 0xdc, 0xdb, 0xdd };
+    p_esp_loader_req req    = (p_esp_loader_req)buf;
+
+    printf("send magic:%d op:%x data_len:%d checksum:0x%08x\n", req->head.zero, req->head.op, req->head.data_len, req->head.checksum);
+
+    for (int i = 0; i < req->head.data_len / 4 && i < 9; i++)
     {
-        if ('\xdb' == in[i] && '\xdc' == in[i + 1])
+        printf("data[%d]:0x%08x\n", i, req->data[i]);
+    }
+
+    com_printf_data(buf, len);
+
+    if (!WriteFile(handle, out, 1, &tmp, NULL)) // SLIP协议固定头0xc0
+	{
+        printf("com:%d send head(0xc0) %d %d\n", (int)handle, errno, GetLastError());
+		return -1;
+	}
+
+    num = 1;
+
+    for (unsigned int i = 0; i < len; i++)
+    {
+        if (0xc0 == buf[i])
         {
-            i++;
-            out[j++] = '\xc0';
+            tmp = 2;
+            ptr = out + 1;
         }
-        else if ('\xdb' == in[i] && '\xdd' == in[i + 1])
+        else if (0xdb == buf[i])
         {
-            i++;
-            out[j++] = '\xdb';
+            tmp = 2;
+            ptr = out + 3;
         }
         else
         {
-            out[j++] = in[i];
+            tmp = 1;
+            ptr = buf + i;
         }
-    }
 
-    printf("recv data %d %d\n", len, j);
-
-    int num = 0;
-    p_esp_loader_rsp rsp;
-
-    for (int i = 1; i < j; )
-    {
-        rsp = (p_esp_loader_rsp)(out + i);
-
-        proc(rsp, num++);
-
-        len = sizeof(t_esp_loader_rsp) + rsp->data_len;
-
-        if (rsp->data[rsp->data_len] != 0xc0)
+        if (!WriteFile(handle, ptr, tmp, &tmp, NULL))
         {
-            printf("end error\n");
-            break;
+            printf("com:%d send data %d %d\n", (int)handle, errno, GetLastError());
+            return -2;
         }
 
-        i += len + 1; // 只加1,t_esp_loader_rsp中多了1位data
+        num += tmp;
     }
 
-    return num;
+    if (!WriteFile(handle, out, 1, &tmp, NULL))  // SLIP协议固定尾0xc0
+	{
+        printf("com:%d send end(0xc0) %d %d\n", (int)handle, errno, GetLastError());
+		return -3;
+	}
+
+    num++;
+
+    printf("send data %d %d\n", len, num);
+    return len;
 }
 
-void com_reboot(HANDLE handle)
+int com_recv(HANDLE handle, unsigned char *buf, unsigned int max_len)
 {
-    EscapeCommFunction(handle, SETRTS);
-    EscapeCommFunction(handle, CLRRTS);
+    unsigned int one;
+    unsigned int len;
+
+    for (unsigned int i = 0; i < max_len; i++)
+    {
+        if (!ReadFile(handle, &buf[i], 1, &one, NULL))
+        {
+            printf("COM:%d recv pack head(0x0c) fail %d %d\n", (int)handle, errno, GetLastError());
+            return -1;
+        }
+
+        if (0 == i && 0xc0 != buf[0])
+        {
+            printf("COM:%d recv pack head is not 0xc0 0x%2x %d %d\n", (int)handle, buf[0], errno, GetLastError());
+            return -2;
+        }
+
+        if (0 != i && 0xc0 == buf[i])
+        {
+            len = i + 1;
+            break;
+        }
+    }
+
+    com_printf_data(buf, len);
+
+    unsigned int   j   = 0;
+    unsigned char *out = buf;
+
+    for (unsigned int i = 0; i < len; i++)
+    {
+        if (0xdb == buf[i] && 0xdc == buf[i + 1])
+        {
+            i++;
+            out[j++] = 0xc0;
+        }
+        else if (0xdb == buf[i] && 0xdd == buf[i + 1])
+        {
+            i++;
+            out[j++] = 0xdb;
+        }
+        else
+        {
+            out[j++] = buf[i];
+        }
+    }
+
+    p_esp_loader_rsp rsp = (p_esp_loader_rsp)(buf + 1);
+
+    if (0x48 != rsp->op)
+    {
+        for (int i = 0; i < rsp->data_len; i++)
+        {
+            printf("[%d]=%02x\n", i, rsp->data[i]);
+        }
+
+        int ret = rsp->data[rsp->data_len - 1];
+        printf("recv data %d %d\nmagic:%d op:%x data_len:%d value:0x%08x ret:%d\n", len, j, rsp->one, rsp->op, rsp->data_len, rsp->value, ret);
+        return ret;
+    }
+    else
+    {
+        printf("recv data OHAI\n");
+        return 0;
+    }
+}
+
+int com_send_recv(HANDLE handle, unsigned char *buf, p_esp_loader_req req, unsigned int max_len, const char *info)
+{
+    printf("----------------------------------------------------------------------\n");
+    printf("send %s\n", info);
+
+    if (com_send(handle, buf, sizeof(req->head) + req->head.data_len) <= 0)
+    {
+        return -1;
+    }
+
+    printf("--------------------------------\n");
+    printf("recv %s\n", info);
+
+    return com_recv(g_com, buf, max_len);
+}
+
+int com_sync(HANDLE handle, unsigned char *buf, unsigned int max_len)
+{
+    // 0x08|同步|0x07,0x07,0x12,0x20,0x55*32
+    p_esp_loader_req req = (p_esp_loader_req)buf;
+    req->head.zero       = 0;
+    req->head.op         = 0x08;
+    req->head.data_len   = 36;
+    req->head.checksum   = 0;
+    req->data[0]         = 0x20120707;
+    memset(req->data + 1, 0x55, 32);
+
+    printf("----------------------------------------------------------------------\n");
+    printf("send sync1\n");
+
+    if (com_send(handle, buf, sizeof(req->head) + req->head.data_len) <= 0) // 发送2个同步命令,收到8个应答,只发1个不应答
+    {
+        return -1;
+    }
+
+    printf("----------------------------------------------------------------------\n");
+    printf("send sync2\n");
+
+    if (com_send(handle, buf, sizeof(req->head) + req->head.data_len) <= 0)
+    {
+        return -2;
+    }
+
+    for (int i = 0; i < 8; i++)
+    {
+        printf("----------------------------------------------------------------------\n");
+        printf("recv sync %d\n", i);
+
+        if (com_recv(g_com, buf, max_len) != 0)
+        {
+            return -3;
+        }
+    }
+
+    return 0;
+}
+
+int com_read_mem(HANDLE handle, unsigned char *buf, unsigned int max_len)
+{
+    // 0x0a|读取内存|地址
+    p_esp_loader_req req = (p_esp_loader_req)buf;
+    req->head.zero       = 0;
+    req->head.op         = 0x0a;
+    req->head.data_len   = 4;
+    req->head.checksum   = 0;
+    req->data[0]         = 0x3ff0005c;
+
+    return com_send_recv(handle, buf, req, max_len, "read mem");
+}
+
+int com_set_flash_param(HANDLE handle, unsigned char *buf, unsigned int max_len)
+{
+    // 0x0b|设置FLASH参数|id,总大小,块大小,扇区大小,页大小,掩码
+    p_esp_loader_req req = (p_esp_loader_req)buf;
+    req->head.zero       = 0;
+    req->head.op         = 0x0b;
+    req->head.data_len   = 24;
+    req->head.checksum   = 0;
+    req->data[0]         = 0;           //      ID
+    req->data[1]         = 0x00400000;  // 4M   总大小
+    req->data[2]         = 0x00010000;  // 64K  块大小
+    req->data[3]         = 0x00001000;  // 4K   扇区大小
+    req->data[4]         = 0x00000100;  // 256B 页大小
+    req->data[5]         = 0x0000ffff;  //      掩码
+
+    return com_send_recv(handle, buf, req, max_len, "set flash param");
+}
+
+int com_upload_stub(HANDLE handle, unsigned char *buf, unsigned int max_len)
+{
+    unsigned char   *sub_text   = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char   *sub_data   = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned int    text_len    = BUFF_SIZE;
+    unsigned int    data_len    = BUFF_SIZE;
+
+    if (0 != com_decompress(STUB_TEXT, sizeof(STUB_TEXT), sub_text, &text_len))
+    {
+        printf("com_decompress sub_text fail\n");
+        return -1;
+    }
+
+    if (0 != com_decompress(STUB_DATA, sizeof(STUB_DATA), sub_data, &data_len))
+    {
+        printf("com_decompress sub_data fail\n");
+        return -2;
+    }
+
+    unsigned int size = 0x1800;
+    unsigned int num = (text_len + size - 1) / size;
+
+    // 0x05|内存写数据开始|总大小,包数量,包大小,地址
+    p_esp_loader_req req = (p_esp_loader_req)buf;
+    req->head.zero       = 0;
+    req->head.op         = 0x05;
+    req->head.data_len   = 16;
+    req->head.checksum   = 0;
+    req->data[0]         = text_len;
+    req->data[1]         = num;
+    req->data[2]         = size;
+    req->data[3]         = STUB_TEXT_ADDR;
+
+    if (0 != com_send_recv(handle, buf, req, max_len, "write sub .text begin")) return -3;
+
+    for (unsigned int i = 0; i < num; i++)
+    {
+        int len = ((i != (num - 1)) ? size : (text_len % size));
+
+        // 0x07|向内存写数据|数据大小,序列号,0x00,0x00
+        req->head.zero       = 0;
+        req->head.op         = 0x07;
+        req->head.data_len   = len + 16;
+        req->head.checksum   = com_checksum(sub_text + size * i, len, 0xef);
+        req->data[0]         = len;
+        req->data[1]         = i;
+        req->data[2]         = 0;
+        req->data[3]         = 0;
+        memcpy(req->data + 4, sub_text + size * i, len);
+
+        if (0 != com_send_recv(handle, buf, req, max_len, "write .text data")) return -4;
+    }
+
+    num = (data_len + size - 1) / size;
+
+    // 0x05|内存写数据开始|总大小,包数量,包大小,地址
+    req = (p_esp_loader_req)buf;
+    req->head.zero       = 0;
+    req->head.op         = 0x05;
+    req->head.data_len   = 16;
+    req->head.checksum   = 0;
+    req->data[0]         = data_len;
+    req->data[1]         = num;
+    req->data[2]         = size;
+    req->data[3]         = STUB_DATA_ADDR;
+
+    if (0 != com_send_recv(handle, buf, req, max_len, "write .data begin")) return -5;
+
+    for (unsigned int i = 0; i < num; i++)
+    {
+        int len = ((i != (num - 1)) ? size : (data_len % size));
+
+        // 0x07|向内存写数据|数据大小,序列号,0x00,0x00
+        req->head.zero       = 0;
+        req->head.op         = 0x07;
+        req->head.data_len   = len + 16;
+        req->head.checksum   = com_checksum(sub_data + size * i, len, 0xef);
+        req->data[0]         = len;
+        req->data[1]         = i;
+        req->data[2]         = 0;
+        req->data[3]         = 0;
+        memcpy(req->data + 4, sub_data + size * i, len);
+
+        if (0 != com_send_recv(handle, buf, req, max_len, "write .data data")) return -6;
+    }
+
+    // 0x06|向内存写数据结束|执行标记,入口地址
+    req->head.zero       = 0;
+    req->head.op         = 0x06;
+    req->head.data_len   = 8;
+    req->head.checksum   = 0;
+    req->data[0]         = 0;
+    req->data[1]         = STUB_ENTRY_ADDR;
+
+    if (0 != com_send_recv(handle, buf, req, max_len, "write mem end")) return -7;
+
+    printf("--------------------------------\n");
+    printf("recv OHAI\n");
+
+    return com_recv(g_com, buf, max_len);
+}
+
+int com_upload_bin(HANDLE handle, unsigned char *buf, unsigned int max_len, unsigned char *bin, unsigned int bin_len, unsigned int addr, int reboot)
+{
+    unsigned char md5_data[16];
+    md5(bin, bin_len, md5_data);
+
+    for (int i = 0; i < 16; i++)
+    {
+        printf("md5[i]:%02x\n", md5_data[i]);
+    }
+
+    unsigned int size = 0x4000;
+    unsigned int num = (bin_len + size - 1) / size;
+
+    // 0x10|向Flash写数据开始|未压缩大小,包数量,包大小,地址
+    p_esp_loader_req req = (p_esp_loader_req)buf;
+    req->head.zero       = 0;
+    req->head.op         = 0x05;
+    req->head.data_len   = 16;
+    req->head.checksum   = 0;
+    req->data[0]         = bin_len;
+    req->data[1]         = num;
+    req->data[2]         = size;
+    req->data[3]         = addr;
+
+    if (0 != com_send_recv(handle, buf, req, max_len, "write bin begin")) return -2;
+
+    for (unsigned int i = 0; i < num; i++)
+    {
+        int len = ((i != (num - 1)) ? size : (bin_len % size));
+
+        // 0x11|向Flash写数据|数据大小,序列号,0x00,0x00
+        req->head.zero       = 0;
+        req->head.op         = 0x11;
+        req->head.data_len   = len + 16;
+        req->head.checksum   = com_checksum(bin + size * i, len, 0xef);
+        req->data[0]         = len;
+        req->data[1]         = i;
+        req->data[2]         = 0;
+        req->data[3]         = 0;
+        memcpy(req->data + 4, bin + size * i, len);
+
+        if (0 != com_send_recv(handle, buf, req, max_len, "write bin data")) return -3;
+    }
+
+    // 0x13|Flash数据MD5|地址,大小,0x00,0x00
+    req->head.zero       = 0;
+    req->head.op         = 0x13;
+    req->head.data_len   = 16;
+    req->head.checksum   = 0;
+    req->data[0]         = addr;
+    req->data[1]         = bin_len;
+    req->data[2]         = 0;
+    req->data[3]         = 0;
+
+    if (0 != com_send_recv(handle, buf, req, max_len, "write bin md5")) return -4;
+
+    p_esp_loader_rsp rsp = (p_esp_loader_rsp)(buf + 1);
+
+    printf("md5 check %s\n", (0 == memcmp(rsp->data, md5_data, sizeof(md5_data))) ? "ok" : "fail!!!");
+
+    if (!reboot) return 0;
+
+    EscapeCommFunction(handle, SETRTS); // 重启1
+    EscapeCommFunction(handle, CLRRTS); // 重启2
+    return 0;
 }
 
 /**
@@ -752,14 +970,7 @@ int process_csv(const char *input, const char *output)
 
     printf("%s num:%d ok\n", output, num);
 
-    if (0 != fopen_s(&fp, output, "wb+"))
-    {
-        printf("open %s error\n", output);
-        return -5;
-    }
-
-    fwrite(&cvs, 1, sizeof(cvs), fp);
-    fclose(fp);
+    put_file_data(output, &cvs, sizeof(cvs));
     return 0;
 }
 
@@ -773,28 +984,16 @@ int process_csv(const char *input, const char *output)
  */
 int process_bin(const char *input, const char *output, unsigned int model, unsigned int version)
 {
-#define BUFF_SIZE   16 * 1024 * 1024
-    FILE           *fp;
     char           *in = (char*)malloc(BUFF_SIZE);
     char           *out = (char*)malloc(BUFF_SIZE);
     p_Elf32_Ehdr    elf = (p_Elf32_Ehdr)in;
 
-    if (0 != fopen_s(&fp, input, "rb"))
-    {
-        free(in);
-        free(out);
-        printf("open %s error\n", input);
-        return -1;
-    }
-
-    fseek(fp, 0, SEEK_SET);
-    fread(in, 1, BUFF_SIZE, fp);
-    fclose(fp);
+    if (get_file_data(input, in, BUFF_SIZE) < 0) return -1;
 
     printf("e_entry:     \t0x%x\n", elf->e_entry);
     printf("e_shoff:     \t0x%x\n", elf->e_shoff);
-    printf("e_shnum:     \t0x%x\n", elf->e_shnum);
     printf("e_shentsize: \t0x%x\n", elf->e_shentsize);
+    printf("e_shnum:     \t0x%x\n", elf->e_shnum);
     printf("e_shstrndx:  \t0x%x\n", elf->e_shstrndx);
 
     unsigned int ro;
@@ -802,13 +1001,17 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
     unsigned int len;
     unsigned int pad;
     unsigned int num[2] = { 0 };
-    p_sec_data   ptr;
-    t_sec_data   sec[2][512];
+    p_sec        ptr;
+    t_sec        sec[2][512];
     p_Elf32_Shdr section = (p_Elf32_Shdr)(in + elf->e_shoff);
     const char  *name = in + section[elf->e_shstrndx].sh_offset;
 
+    printf("name:%s\n", name);
+
     for (int i = 0; i < elf->e_shnum; i++, section++)
     {
+        printf("%s\n", name + section->sh_name);
+
         if (1 == section->sh_type  && 0 != section->sh_addr && 0 != section->sh_size)
         {
             id = (0 != strncmp(name + section->sh_name, ".flash.", 7));
@@ -816,12 +1019,12 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
 
             ptr = &(sec[id][num[id]]);
             ptr->offset   = section->sh_offset + ro;
-            ptr->sec.addr = section->sh_addr;
-            ptr->sec.size = section->sh_size - ro;
+            ptr->head.addr = section->sh_addr;
+            ptr->head.size = section->sh_size - ro;
 
-            len = ptr->sec.size;
+            len = ptr->head.size;
             pad = (0 == len % 4) ? 0 : (4 - len % 4); // 4字节对齐,需要补齐
-            ptr->sec.size += pad;
+            ptr->head.size += pad;
             memset(in + ptr->offset + len, 0, pad);
 
             num[id]++;
@@ -831,6 +1034,8 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
 
     if (3 == version)
     {
+        t_sec t;
+
         // 排序
         for (int i = 0; i < 2; i++)
         {
@@ -838,9 +1043,9 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
             {
                 for (unsigned int k = 1; k < num[i]; k++)
                 {
-                    if (sec[i][k].sec.addr < sec[i][j].sec.addr)
+                    if (sec[i][k].head.addr < sec[i][j].head.addr)
                     {
-                        t_sec_data t = sec[i][j];
+                        t = sec[i][j];
                         sec[i][j] = sec[i][k];
                         sec[i][k] = t;
                     }
@@ -863,15 +1068,12 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
         {
             ptr = &(sec[i][j]);
 
-            for (unsigned int k = 0; k < ptr->sec.size; k++)
-            {
-                checksum ^= in[ptr->offset + k];
-            }
+            checksum = com_checksum(in + ptr->offset, ptr->head.size, checksum);
 
-            memcpy(&out[len], &(ptr->sec), sizeof(ptr->sec));
-            len += sizeof(ptr->sec);
-            memcpy(&out[len], in + ptr->offset, ptr->sec.size);
-            len += ptr->sec.size;
+            memcpy(&out[len], &(ptr->head), sizeof(ptr->head));
+            len += sizeof(ptr->head);
+            memcpy(&out[len], in + ptr->offset, ptr->head.size);
+            len += ptr->head.size;
 
             printf("section checksum %2x\n", checksum);
         }
@@ -903,14 +1105,7 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
         len += sizeof(sha256.state);
     }
 
-    if (0 != fopen_s(&fp, output, "wb+"))
-    {
-        printf("open %s error\n", output);
-        return -2;
-    }
-
-    fwrite(out, 1, len, fp);
-    fclose(fp);
+    put_file_data(output, out, len);
     free(out);
     free(in);
     return 0;
@@ -925,89 +1120,52 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
  */
 int process_rom(const char *input, unsigned int addr, unsigned int com)
 {
-    char        *in = (char*)malloc(BUFF_SIZE);
-    unsigned int in_len;
+    com_reboot_to_loader(com); // 模块重启进入串口下载模式
 
-    FILE *fp = NULL;
+    int             ret     = 0;
+    unsigned int    in_len  = BUFF_SIZE;
+    unsigned int    buf_len = BUFF_SIZE;
+    unsigned char   *in     = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char   *buf    = (unsigned char*)malloc(BUFF_SIZE);
 
-    if (0 != fopen_s(&fp, input, "rb"))
+    in_len = get_file_data(input, in, BUFF_SIZE);
+
+    if (in_len < 0) return -1;
+
+    do
     {
-        free(in);
-        printf("open %s error\n", input);
-        return -1;
-    }
+        g_com = com_open(com, 115200, 8, 0, 1, 1);
 
-    in_len = fread(in, 1, BUFF_SIZE, fp);
-    fclose(fp);
+        if (g_com < 0)
+        {
+            ret = -2;
+            break;
+        }
 
-    //----------------------------------------------------------------
-    // 进入串口下载模式
+        if (0 != com_sync(g_com, buf, BUFF_SIZE))
+        {
+            ret = -3;
+            break;
+        }
 
-    g_com = com_open(com, 74880, 8, 0, 1, 1);
+        if (0 != com_upload_stub(g_com, buf, BUFF_SIZE))
+        {
+            ret = -4;
+            break;
+        }
 
-    if (g_com < 0)
-    {
-        return -2;
-    }
+        if (0 != com_upload_bin(g_com, buf, BUFF_SIZE, in, in_len, addr, 1))
+        {
+            ret = -5;
+            break;
+        }
 
-    EscapeCommFunction(g_com, SETRTS);
-    EscapeCommFunction(g_com, CLRRTS);
-    EscapeCommFunction(g_com, SETDTR);
-    Sleep(100);
-    EscapeCommFunction(g_com, CLRDTR);
-    EscapeCommFunction(g_com, CLRRTS);
+    } while (0);
 
+    free(in);
+    free(buf);
     CloseHandle(g_com);
-
-    //----------------------------------------------------------------
-
-    unsigned char *buf = (unsigned char *)malloc(BUFF_SIZE);
-    p_esp_loader_req req = (p_esp_loader_req)buf;
-
-    // 0x08|同步|0x07,0x07,0x12,0x20,0x55*32
-    req->head.zero       = 0;
-    req->head.op         = 0x08;
-    req->head.data_len   = 36;
-    req->head.checksum   = 0;
-    req->data[0]         = 0x07;
-    req->data[1]         = 0x07;
-    req->data[2]         = 0x12;
-    req->data[3]         = 0x20;
-    memset(req->data + 4, 0x55, 32);
-
-    g_com = com_open(com, 115200, 8, 0, 1, 1);
-
-    if (g_com < 0)
-    {
-        return -3;
-    }
-
-    int ret = com_send(g_com, req, sizeof(req->head) + req->head.data_len);
-
-    if (ret <= 0)
-    {
-        CloseHandle(g_com);
-        return -4;
-    }
-
-    ret = com_send(g_com, req, sizeof(req->head) + req->head.data_len); // 发送2个同步命令,收到8个应答
-
-    if (ret <= 0)
-    {
-        CloseHandle(g_com);
-        return -4;
-    }
-
-    ret = com_recv(g_com, buf, BUFF_SIZE, callback);
-
-    if (ret <= 0)
-    {
-        CloseHandle(g_com);
-        return -5;
-    }
-
-    CloseHandle(g_com);
-    return 0;
+    return ret;
 }
 
 /**

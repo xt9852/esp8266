@@ -29,12 +29,12 @@ H|x|x|SDIO|SD-card 启动
 RTS 连接  EN, 低电平复位
 DTR 连接 GPIO0, 低电平进入下载模式
 ``` cpp
-EscapeCommFunction(g_com, SETRTS);
-EscapeCommFunction(g_com, CLRRTS);
-EscapeCommFunction(g_com, SETDTR);
-Sleep(100);
-EscapeCommFunction(g_com, CLRDTR);
-EscapeCommFunction(g_com, CLRRTS);
+EscapeCommFunction(handle, SETRTS); // 重启1
+EscapeCommFunction(handle, CLRRTS); // 重启2
+EscapeCommFunction(handle, SETDTR); // 设置GPIO,进入到串口下载模式
+Sleep(100);                         // 等待不能删除
+EscapeCommFunction(handle, CLRDTR); // 清空
+EscapeCommFunction(handle, CLRRTS); // 清空
 ```
 启动时串口(波特率74880)输出的boot mode:(x, y),x的低3位对应{GPIO15, 0, 2}
 
@@ -208,7 +208,7 @@ ESP8266 ROM Loader和ESP8266 Stub Loader都有的命令,各字段为4字节
 0x02|烧录开始|擦除大小|包数量|包内数据大小|地址
 0x03|烧录数据|数据大小|序列号|0x00|数据校验码|
 0x04|烧录完成|0-重启<br>1-进入用户代码|
-0x05|内存写开始|总大小|数据包数量|包内数据大小|地址
+0x05|内存写开始|总大小|包数量|包大小|地址
 0x06|内存写结束|执行标记|入口地址|
 0x07|内存写数据|数据大小|序列号|0x00|数据校验码
 0x08|同步|0x07,0x07,0x12,0x20|0x55*32
