@@ -31,135 +31,134 @@
 enum
 {
     APP = 0,
-    OTA,                        // 生成OTA数据
-    CVS,                        // 生成分区表数据
-    BIN,                        // 生成BIN数据
-    ROM,                        // 烧录固件
-    RAM,                        // 向内存写入数据
-    F12,                        // ESP8266型号:12F
+    OTA,                                    // 生成OTA数据
+    CVS,                                    // 生成分区表数据
+    BIN,                                    // 生成BIN数据
+    ROM,                                    // 烧录固件
+    RAM,                                    // 向内存写入数据
+    F12,                                    // ESP8266型号:12F
 };
 
 typedef struct _arg
 {
-    unsigned int    type;       // 类型:OTA,CVS,BIN,FLASH
-    unsigned int    com;        // 串口号
-    unsigned int    size;       // 数据的长度
-    unsigned int    addr;       // 数据的地址
-    unsigned int    model;      // 型号:12F
-    unsigned int    version;    // 版本:1,3
-    const char     *input;      // 输入文件
-    const char     *output;     // 输出文件
+    unsigned int            type;           // 类型:OTA,CVS,BIN,FLASH
+    unsigned int            com;            // 串口号
+    unsigned int            size;           // 数据的长度
+    unsigned int            addr;           // 数据的地址
+    unsigned int            model;          // 型号:12F
+    unsigned int            version;        // 版本:1,3
+    const char              *input;         // 输入文件
+    const char              *output;        // 输出文件
 
 } t_arg, *p_arg;
 
 typedef struct _cvs
 {
-    unsigned short magic;       // 0x50AA
-    unsigned char  type;        // app-0,data-1
-    unsigned char  type_sub;    // factory-0x00,test-0x20,ota-0x00, phy-0x01, nvs-0x02, coredump-0x03, nvs_keys-0x04, efuse-0x05, esphttpd-0x80, fat-0x81, spiffs-0x82
-    unsigned int   offset;      // 位置
-    unsigned int   size;        // 大小
-    char           name[16];    // 名称
-    unsigned int   flags;       // 标记
+    unsigned short          magic;          // 0x50AA
+    unsigned char           type;           // app-0,data-1
+    unsigned char           type_sub;       // factory-0x00,test-0x20,ota-0x00, phy-0x01, nvs-0x02, coredump-0x03, nvs_keys-0x04, efuse-0x05, esphttpd-0x80, fat-0x81, spiffs-0x82
+    unsigned int            offset;         // 位置
+    unsigned int            size;           // 大小
+    char                    name[16];       // 名称
+    unsigned int            flags;          // 标记
 
 } t_cvs, *p_cvs;
 
 typedef struct _bin
 {
-    unsigned char   magic;      // 固定0xE9
-    unsigned char   sec_num;    // 段数量
-    unsigned char   flash_mod;  // FLASH模式          QIO,QOUT,DIO,DOUT,FAST_READ,SLOW_READ
-    unsigned char   flash_sf;   // FLASH大小和频率    大小:1MB,2MB,4MB,8MB,16MB 频率40M,26M,20M,80M
-    unsigned int    entry;      // 入口地址
+    unsigned char           magic;          // 固定0xE9
+    unsigned char           sec_num;        // 段数量
+    unsigned char           flash_mod;      // FLASH模式          QIO,QOUT,DIO,DOUT,FAST_READ,SLOW_READ
+    unsigned char           flash_sf;       // FLASH大小和频率    大小:1MB,2MB,4MB,8MB,16MB 频率40M,26M,20M,80M
+    unsigned int            entry;          // 入口地址
 
 } t_bin, *p_bin;
 
 typedef struct _sec_head
 {
-    unsigned int    addr;       // 段内存地址
-    unsigned int    size;       // 段大小
+    unsigned int            addr;           // 段内存地址
+    unsigned int            size;           // 段大小
 
 } t_sec_head, *p_sec_head;
 
 typedef struct _sec
 {
-    t_sec_head      head;       // 段头
-    unsigned int    offset;     // 段数据在文件中的位置
-    unsigned int    pad;        // 4字节对齐
+    t_sec_head              head;           // 段头
+    unsigned int            offset;         // 段数据在文件中的位置
+    unsigned int            pad;            // 4字节对齐
 
 } t_sec, *p_sec;
 
 typedef struct _Elf32_Ehdr
 {
-	unsigned char  e_ident[16]; // 0x7F+ELF
-	unsigned short e_type;      // 该文件的类型
-	unsigned short e_machine;   // 体系结构0x5e
-	unsigned int   e_version;   // 文件的版本
-	unsigned int   e_entry;     // 入口地址
-	unsigned int   e_phoff;     // Program header table 在文件中的偏移量
-	unsigned int   e_shoff;     // Section header table 在文件中的偏移量
-	unsigned int   e_flags;     // IA32而言，此项为0
-	unsigned short e_ehsize;    // ELF header大小
-	unsigned short e_phentsize; // Program header table中每一个条目的大小
-	unsigned short e_phnum;     // Program header table中有多少个条目
-	unsigned short e_shentsize; // Section header table中的每一个条目的大小
-	unsigned short e_shnum;     // Section header table中有多少个条目
-	unsigned short e_shstrndx;  // 包含节名称的字符串是第几个节
+    unsigned char           e_ident[16];    // 0x7F+ELF
+    unsigned short          e_type;         // 该文件的类型
+    unsigned short          e_machine;      // 体系结构0x5e
+    unsigned int            e_version;      // 文件的版本
+    unsigned int            e_entry;        // 入口地址
+    unsigned int            e_phoff;        // Program header table 在文件中的偏移量
+    unsigned int            e_shoff;        // Section header table 在文件中的偏移量
+    unsigned int            e_flags;        // IA32而言，此项为0
+    unsigned short          e_ehsize;       // ELF header大小
+    unsigned short          e_phentsize;    // Program header table中每一个条目的大小
+    unsigned short          e_phnum;        // Program header table中有多少个条目
+    unsigned short          e_shentsize;    // Section header table中的每一个条目的大小
+    unsigned short          e_shnum;        // Section header table中有多少个条目
+    unsigned short          e_shstrndx;     // 包含节名称的字符串是第几个节
+
 } Elf32_Ehdr, *p_Elf32_Ehdr;
 
 typedef struct _Elf32_Shdr
 {
-    unsigned int   sh_name;     // Section name (string tbl index)
-    unsigned int   sh_type;     // Section type
-    unsigned int   sh_flags;    // Section flags
-    unsigned int   sh_addr;     // Section virtual addr at execution
-    unsigned int   sh_offset;   // Section file offset
-    unsigned int   sh_size;     // Section size in bytes
-    unsigned int   sh_link;     // Link to another section
-    unsigned int   sh_info;     // Additional section information
-    unsigned int   sh_addralign;// Section alignment
-    unsigned int   sh_entsize;  // Entry size if section holds table
+    unsigned int            sh_name;        // Section name (string tbl index)
+    unsigned int            sh_type;        // Section type
+    unsigned int            sh_flags;       // Section flags
+    unsigned int            sh_addr;        // Section virtual addr at execution
+    unsigned int            sh_offset;      // Section file offset
+    unsigned int            sh_size;        // Section size in bytes
+    unsigned int            sh_link;        // Link to another section
+    unsigned int            sh_info;        // Additional section information
+    unsigned int            sh_addralign;   // Section alignment
+    unsigned int            sh_entsize;     // Entry size if section holds table
+
 } Elf32_Shdr, *p_Elf32_Shdr;
 
 typedef struct _esp_loader_req_head
 {
-    unsigned char           zero;       // 固定为0x00
-    unsigned char           op;         // 命令码
-    unsigned short          data_len;   // 数据长度
-    unsigned int            checksum;   // 校验码
+    unsigned char           zero;           // 固定为0x00
+    unsigned char           op;             // 命令码
+    unsigned short          data_len;       // 数据长度
+    unsigned int            checksum;       // 校验码
 
 } t_esp_loader_req_head, *p_esp_loader_req_head;
 
 #pragma pack(push)
-#pragma pack(1) // 设定为1字节对齐
+#pragma pack(1)
 
 typedef struct _esp_loader_req
 {
-    t_esp_loader_req_head   head;       // 命令头
-    unsigned int            data[1];    // 数据
+    t_esp_loader_req_head   head;           // 命令头
+    unsigned int            data[1];        // 数据
 
 } t_esp_loader_req, *p_esp_loader_req;
 
 typedef struct _esp_loader_rsp
 {
-    unsigned char           one;        // 固定为0x01
-    unsigned char           op;         // 结果
-    unsigned short          data_len;   // 数据长度
-    unsigned int            value;      // 值,内存读取命令应答使用
-    unsigned char           data[1];    // 数据
+    unsigned char           one;            // 固定为0x01
+    unsigned char           op;             // 结果
+    unsigned short          data_len;       // 数据长度
+    unsigned int            value;          // 值,内存读取命令应答使用
+    unsigned char           data[1];        // 数据
 
 } t_esp_loader_rsp, *p_esp_loader_rsp;
 
 #pragma pack(pop)
 
-static t_arg g_arg = { 0 };
-
-HANDLE g_com = NULL;
+static t_arg    g_arg;
+static HANDLE   g_com;
 
 unsigned char com_checksum(unsigned char *data, unsigned int data_len, unsigned char checksum)
 {
-    //unsigned char sum = 0xef;
-
     for (unsigned int i = 0; i < data_len; i++)
     {
         checksum ^= data[i];
@@ -276,22 +275,22 @@ HANDLE com_open(int com, int BaudRate, int ByteSize, int Parity, int StopBits, i
     }
 
     DCB p = { 0 };
-	p.DCBlength = sizeof(p);
-	p.BaudRate  = BaudRate;     // 波特率
-	p.ByteSize  = ByteSize;     // 数据位
+    p.DCBlength = sizeof(p);
+    p.BaudRate  = BaudRate;     // 波特率
+    p.ByteSize  = ByteSize;     // 数据位
     p.Parity    = Parity;       // 无校验
     p.StopBits  = StopBits;     // 1位停止位
 
-	if (!SetCommState(handle, &p))
-	{
+    if (!SetCommState(handle, &p))
+    {
         printf("COM%d set fail (%d %d %d %d)\n", com, BaudRate, ByteSize, Parity, StopBits);
         CloseHandle(handle);
         return (HANDLE)-2;
-	}
+    }
 
     printf("COM%d open success (%d %d %d %d)\n", com, BaudRate, ByteSize, Parity, StopBits);
 
-	if (!PurgeComm(handle, PURGE_TXCLEAR | PURGE_RXCLEAR)) // 清空串口缓冲区
+    if (!PurgeComm(handle, PURGE_TXCLEAR | PURGE_RXCLEAR)) // 清空串口缓冲区
     {
         printf("COM%d PurgeComm fail\n", com);
         CloseHandle(handle);
@@ -325,7 +324,7 @@ void com_reboot_to_loader(unsigned int com)
 
 int com_decompress(const char *in, unsigned int in_len, unsigned char *out, unsigned int *out_len)
 {
-    printf("in_len:%d\n", in_len);
+    printf("base64 len:%d\n", in_len);
 
     unsigned char *tmp     = (unsigned char*)malloc(BUFF_SIZE);
     unsigned int   tmp_len = BUFF_SIZE;
@@ -351,7 +350,7 @@ int com_decompress(const char *in, unsigned int in_len, unsigned char *out, unsi
     }
 
     free(tmp);
-    printf("file data len:%d\n", *out_len);
+    printf("file   data len:%d\n", *out_len);
     return 0;
 }
 
@@ -373,10 +372,10 @@ int com_send(HANDLE handle, unsigned char *buf, unsigned int len)
     com_printf_data(buf, len);
 
     if (!WriteFile(handle, out, 1, &tmp, NULL)) // SLIP协议固定头0xc0
-	{
+    {
         printf("com:%d send head(0xc0) %d %d\n", (int)handle, errno, GetLastError());
-		return -1;
-	}
+        return -1;
+    }
 
     num = 1;
 
@@ -408,10 +407,10 @@ int com_send(HANDLE handle, unsigned char *buf, unsigned int len)
     }
 
     if (!WriteFile(handle, out, 1, &tmp, NULL))  // SLIP协议固定尾0xc0
-	{
+    {
         printf("com:%d send end(0xc0) %d %d\n", (int)handle, errno, GetLastError());
-		return -3;
-	}
+        return -3;
+    }
 
     num++;
 
@@ -488,10 +487,12 @@ int com_recv(HANDLE handle, unsigned char *buf, unsigned int max_len)
     }
 }
 
-int com_send_recv(HANDLE handle, unsigned char *buf, p_esp_loader_req req, unsigned int max_len, const char *info)
+int com_send_recv(HANDLE handle, unsigned char *buf, unsigned int max_len, const char *info)
 {
     printf("----------------------------------------------------------------------\n");
     printf("send %s\n", info);
+
+    p_esp_loader_req req = (p_esp_loader_req)buf;
 
     if (com_send(handle, buf, sizeof(req->head) + req->head.data_len) <= 0)
     {
@@ -547,7 +548,7 @@ int com_sync(HANDLE handle, unsigned char *buf, unsigned int max_len)
 
 int com_read_mem(HANDLE handle, unsigned char *buf, unsigned int max_len)
 {
-    // 0x0a|读取内存|地址
+    // 读取内存|地址
     p_esp_loader_req req = (p_esp_loader_req)buf;
     req->head.zero       = 0;
     req->head.op         = 0x0a;
@@ -555,7 +556,7 @@ int com_read_mem(HANDLE handle, unsigned char *buf, unsigned int max_len)
     req->head.checksum   = 0;
     req->data[0]         = 0x3ff0005c;
 
-    return com_send_recv(handle, buf, req, max_len, "read mem");
+    return com_send_recv(handle, buf, max_len, "read mem");
 }
 
 int com_set_flash_param(HANDLE handle, unsigned char *buf, unsigned int max_len)
@@ -573,115 +574,13 @@ int com_set_flash_param(HANDLE handle, unsigned char *buf, unsigned int max_len)
     req->data[4]         = 0x00000100;  // 256B 页大小
     req->data[5]         = 0x0000ffff;  //      掩码
 
-    return com_send_recv(handle, buf, req, max_len, "set flash param");
+    return com_send_recv(handle, buf, max_len, "set flash param");
 }
 
-int com_upload_stub(HANDLE handle, unsigned char *buf, unsigned int max_len)
-{
-    unsigned char   *sub_text   = (unsigned char*)malloc(BUFF_SIZE);
-    unsigned char   *sub_data   = (unsigned char*)malloc(BUFF_SIZE);
-    unsigned int    text_len    = BUFF_SIZE;
-    unsigned int    data_len    = BUFF_SIZE;
-
-    if (0 != com_decompress(STUB_TEXT, sizeof(STUB_TEXT), sub_text, &text_len))
-    {
-        printf("com_decompress sub_text fail\n");
-        return -1;
-    }
-
-    if (0 != com_decompress(STUB_DATA, sizeof(STUB_DATA), sub_data, &data_len))
-    {
-        printf("com_decompress sub_data fail\n");
-        return -2;
-    }
-
-    unsigned int size = 0x1800;
-    unsigned int num = (text_len + size - 1) / size;
-
-    // 0x05|内存写数据开始|总大小,包数量,包大小,地址
-    p_esp_loader_req req = (p_esp_loader_req)buf;
-    req->head.zero       = 0;
-    req->head.op         = 0x05;
-    req->head.data_len   = 16;
-    req->head.checksum   = 0;
-    req->data[0]         = text_len;
-    req->data[1]         = num;
-    req->data[2]         = size;
-    req->data[3]         = STUB_TEXT_ADDR;
-
-    if (0 != com_send_recv(handle, buf, req, max_len, "write sub .text begin")) return -3;
-
-    for (unsigned int i = 0; i < num; i++)
-    {
-        int len = ((i != (num - 1)) ? size : (text_len % size));
-
-        // 0x07|向内存写数据|数据大小,序列号,0x00,0x00
-        req->head.zero       = 0;
-        req->head.op         = 0x07;
-        req->head.data_len   = len + 16;
-        req->head.checksum   = com_checksum(sub_text + size * i, len, 0xef);
-        req->data[0]         = len;
-        req->data[1]         = i;
-        req->data[2]         = 0;
-        req->data[3]         = 0;
-        memcpy(req->data + 4, sub_text + size * i, len);
-
-        if (0 != com_send_recv(handle, buf, req, max_len, "write .text data")) return -4;
-    }
-
-    num = (data_len + size - 1) / size;
-
-    // 0x05|内存写数据开始|总大小,包数量,包大小,地址
-    req = (p_esp_loader_req)buf;
-    req->head.zero       = 0;
-    req->head.op         = 0x05;
-    req->head.data_len   = 16;
-    req->head.checksum   = 0;
-    req->data[0]         = data_len;
-    req->data[1]         = num;
-    req->data[2]         = size;
-    req->data[3]         = STUB_DATA_ADDR;
-
-    if (0 != com_send_recv(handle, buf, req, max_len, "write .data begin")) return -5;
-
-    for (unsigned int i = 0; i < num; i++)
-    {
-        int len = ((i != (num - 1)) ? size : (data_len % size));
-
-        // 0x07|向内存写数据|数据大小,序列号,0x00,0x00
-        req->head.zero       = 0;
-        req->head.op         = 0x07;
-        req->head.data_len   = len + 16;
-        req->head.checksum   = com_checksum(sub_data + size * i, len, 0xef);
-        req->data[0]         = len;
-        req->data[1]         = i;
-        req->data[2]         = 0;
-        req->data[3]         = 0;
-        memcpy(req->data + 4, sub_data + size * i, len);
-
-        if (0 != com_send_recv(handle, buf, req, max_len, "write .data data")) return -6;
-    }
-
-    // 0x06|向内存写数据结束|执行标记,入口地址
-    req->head.zero       = 0;
-    req->head.op         = 0x06;
-    req->head.data_len   = 8;
-    req->head.checksum   = 0;
-    req->data[0]         = 0;
-    req->data[1]         = STUB_ENTRY_ADDR;
-
-    if (0 != com_send_recv(handle, buf, req, max_len, "write mem end")) return -7;
-
-    printf("--------------------------------\n");
-    printf("recv OHAI\n");
-
-    return com_recv(g_com, buf, max_len);
-}
-
-int com_upload_bin(HANDLE handle, unsigned char *buf, unsigned int max_len, unsigned char *bin, unsigned int bin_len, unsigned int addr, int reboot)
+int com_upload_rom(HANDLE handle, unsigned char *buf, unsigned int max_len, unsigned char *data, unsigned int data_len, unsigned int addr, int reboot)
 {
     unsigned char md5_data[16];
-    md5(bin, bin_len, md5_data);
+    md5(data, data_len, md5_data);
 
     for (int i = 0; i < 16; i++)
     {
@@ -689,7 +588,7 @@ int com_upload_bin(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
     }
 
     unsigned int size = 0x4000;
-    unsigned int num = (bin_len + size - 1) / size;
+    unsigned int num = (data_len + size - 1) / size;
 
     // 0x10|向Flash写数据开始|未压缩大小,包数量,包大小,地址
     p_esp_loader_req req = (p_esp_loader_req)buf;
@@ -697,29 +596,29 @@ int com_upload_bin(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
     req->head.op         = 0x05;
     req->head.data_len   = 16;
     req->head.checksum   = 0;
-    req->data[0]         = bin_len;
+    req->data[0]         = data_len;
     req->data[1]         = num;
     req->data[2]         = size;
     req->data[3]         = addr;
 
-    if (0 != com_send_recv(handle, buf, req, max_len, "write bin begin")) return -2;
+    if (0 != com_send_recv(handle, buf, max_len, "write bin begin")) return -2;
 
     for (unsigned int i = 0; i < num; i++)
     {
-        int len = ((i != (num - 1)) ? size : (bin_len % size));
+        int len = ((i != (num - 1)) ? size : (data_len % size));
 
         // 0x11|向Flash写数据|数据大小,序列号,0x00,0x00
         req->head.zero       = 0;
         req->head.op         = 0x11;
         req->head.data_len   = len + 16;
-        req->head.checksum   = com_checksum(bin + size * i, len, 0xef);
+        req->head.checksum   = com_checksum(data + size * i, len, 0xef);
         req->data[0]         = len;
         req->data[1]         = i;
         req->data[2]         = 0;
         req->data[3]         = 0;
-        memcpy(req->data + 4, bin + size * i, len);
+        memcpy(req->data + 4, data + size * i, len);
 
-        if (0 != com_send_recv(handle, buf, req, max_len, "write bin data")) return -3;
+        if (0 != com_send_recv(handle, buf, max_len, "write bin data")) return -3;
     }
 
     // 0x13|Flash数据MD5|地址,大小,0x00,0x00
@@ -728,11 +627,11 @@ int com_upload_bin(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
     req->head.data_len   = 16;
     req->head.checksum   = 0;
     req->data[0]         = addr;
-    req->data[1]         = bin_len;
+    req->data[1]         = data_len;
     req->data[2]         = 0;
     req->data[3]         = 0;
 
-    if (0 != com_send_recv(handle, buf, req, max_len, "write bin md5")) return -4;
+    if (0 != com_send_recv(handle, buf, max_len, "write bin md5")) return -4;
 
     p_esp_loader_rsp rsp = (p_esp_loader_rsp)(buf + 1);
 
@@ -740,8 +639,108 @@ int com_upload_bin(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
 
     if (!reboot) return 0;
 
+    printf("set esp8266 reboot\n");
     EscapeCommFunction(handle, SETRTS); // 重启1
     EscapeCommFunction(handle, CLRRTS); // 重启2
+    return 0;
+}
+
+int com_upload_ram(HANDLE handle, unsigned char *buf, unsigned int max_len, unsigned char *data, unsigned int data_len, unsigned int addr, unsigned int entry)
+{
+    unsigned int size = 0x1800;
+    unsigned int num = (data_len + size - 1) / size;
+
+    // 内存写数据开始|总大小,包数量,包大小,地址
+    p_esp_loader_req req = (p_esp_loader_req)buf;
+    req->head.zero       = 0;
+    req->head.op         = 0x05;
+    req->head.data_len   = 16;
+    req->head.checksum   = 0;
+    req->data[0]         = data_len;
+    req->data[1]         = num;
+    req->data[2]         = size;
+    req->data[3]         = addr;
+
+    if (0 != com_send_recv(handle, buf, max_len, "write ram begin")) return -3;
+
+    for (unsigned int i = 0; i < num; i++)
+    {
+        int len = ((i != (num - 1)) ? size : (data_len % size));
+
+        // 向内存写数据|数据大小,序列号,0x00,0x00
+        req->head.zero       = 0;
+        req->head.op         = 0x07;
+        req->head.data_len   = len + 16;
+        req->head.checksum   = com_checksum(data + size * i, len, 0xef);
+        req->data[0]         = len;
+        req->data[1]         = i;
+        req->data[2]         = 0;
+        req->data[3]         = 0;
+        memcpy(req->data + 4, data + size * i, len);
+
+        if (0 != com_send_recv(handle, buf, max_len, "write ram data")) return -4;
+    }
+
+    if (!entry) return 0;
+
+    // 0x06|向内存写数据结束|执行标记,入口地址
+    req->head.zero       = 0;
+    req->head.op         = 0x06;
+    req->head.data_len   = 8;
+    req->head.checksum   = 0;
+    req->data[0]         = 0;
+    req->data[1]         = entry;
+
+    if (0 != com_send_recv(handle, buf, max_len, "write ram end")) return -7;
+
+    printf("--------------------------------\n");
+    printf("recv OHAI\n");
+
+    return com_recv(g_com, buf, max_len);
+}
+
+int com_upload_stub(HANDLE handle, unsigned char *buf, unsigned int max_len)
+{
+    unsigned char   *sub_text   = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char   *sub_data   = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned int    text_len    = BUFF_SIZE;
+    unsigned int    data_len    = BUFF_SIZE;
+    int             ret;
+
+    do
+    {
+        if (0 != com_decompress(STUB_TEXT, sizeof(STUB_TEXT), sub_text, &text_len))
+        {
+            printf("com_decompress sub_text fail\n");
+            ret = -1;
+            break;
+        }
+
+        if (0 != com_decompress(STUB_DATA, sizeof(STUB_DATA), sub_data, &data_len))
+        {
+            printf("com_decompress sub_data fail\n");
+            ret = -2;
+            break;
+        }
+
+        if (0 != com_upload_ram(handle, buf, max_len, sub_text, text_len, STUB_TEXT_ADDR, 0))
+        {
+            printf("com_upload_ram sub_text fail\n");
+            ret = -3;
+            break;
+        }
+
+        if (0 != com_upload_ram(handle, buf, max_len, sub_data, data_len, STUB_DATA_ADDR, STUB_ENTRY_ADDR))
+        {
+            printf("com_upload_ram sub_data fail\n");
+            ret = -4;
+            break;
+        }
+    }
+    while(0);
+
+    free(sub_text);
+    free(sub_data);
     return 0;
 }
 
@@ -756,7 +755,7 @@ void printf_info()
     printf("esp_app.exe cvs -i=input.cvs -o=output.bin\n");
     printf("esp_app.exe bin -i=input.elf -o=output.bin -model=12F -version={1|3}\n");
     printf("esp_app.exe rom -i=input.bin -addr=0x8000 -com=4\n");
-    printf("esp_app.exe ram -i=input.bin -addr=0x4000 -com=4\n");
+    printf("esp_app.exe ram -i=input.bin -com=4\n");
 }
 
 /**
@@ -794,18 +793,17 @@ int check_args(int argc, char **argv, p_arg arg)
         arg->input   = input + 3;
         arg->output  = output + 3;
     }
-    else if (0 == strcmp(argv[1], "rom") && NULL != argv[2] && NULL != argv[3] && NULL != argv[3] && (input = strstr(argv[2], "-i=")) && (addr = strstr(argv[3], "-addr=0x")) && (addr = strstr(argv[4], "-com=")))
+    else if (0 == strcmp(argv[1], "rom") && NULL != argv[2] && NULL != argv[3] && NULL != argv[4] && (input = strstr(argv[2], "-i=")) && (addr = strstr(argv[3], "-addr=0x")) && (addr = strstr(argv[4], "-com=")))
     {
         arg->type  = ROM;
         arg->com   = atoi(addr + 5);
         arg->addr  = strtol(addr + 8, NULL, 16);
         arg->input = input + 3;
     }
-    else if (0 == strcmp(argv[1], "ram") && NULL != argv[2] && NULL != argv[3] && NULL != argv[3] && (input = strstr(argv[2], "-i=")) && (addr = strstr(argv[3], "-addr=0x")) && (addr = strstr(argv[4], "-com=")))
+    else if (0 == strcmp(argv[1], "ram") && NULL != argv[2] && NULL != argv[3] && (input = strstr(argv[2], "-i=")) && (addr = strstr(argv[3], "-com=")))
     {
         arg->type  = RAM;
         arg->com   = atoi(addr + 5);
-        arg->addr  = strtol(addr + 8, NULL, 16);
         arg->input = input + 3;
     }
     else
@@ -1154,7 +1152,7 @@ int process_rom(const char *input, unsigned int addr, unsigned int com)
             break;
         }
 
-        if (0 != com_upload_bin(g_com, buf, BUFF_SIZE, in, in_len, addr, 1))
+        if (0 != com_upload_rom(g_com, buf, BUFF_SIZE, in, in_len, addr, 1))
         {
             ret = -5;
             break;
@@ -1175,26 +1173,57 @@ int process_rom(const char *input, unsigned int addr, unsigned int com)
  * \param   [in]  unsigned int      com             串口号
  * \return        int                               0:成功,其它失败
  */
-int process_ram(const char *input, unsigned int addr, unsigned int com)
+int process_ram(const char *input, unsigned int com)
 {
-    char        *in = (char*)malloc(BUFF_SIZE);
-    unsigned int in_len;
+    com_reboot_to_loader(com); // 模块重启进入串口下载模式
 
-    FILE *fp = NULL;
+    int             ret     = 0;
+    unsigned int    in_len  = BUFF_SIZE;
+    unsigned int    buf_len = BUFF_SIZE;
+    unsigned char   *in     = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char   *buf    = (unsigned char*)malloc(BUFF_SIZE);
+    p_bin           bin     = (p_bin)in;
 
-    if (0 != fopen_s(&fp, input, "rb"))
+    in_len = get_file_data(input, in, BUFF_SIZE);
+
+    if (in_len < 0) return -1;
+
+    do
     {
-        free(in);
-        printf("open %s error\n", input);
-        return -1;
-    }
+        g_com = com_open(com, 115200, 8, 0, 1, 1);
 
-    in_len = fread(in, 1, BUFF_SIZE, fp);
-    fclose(fp);
+        if (g_com < 0)
+        {
+            ret = -2;
+            break;
+        }
 
-    printf("input:%u\n", in_len);
+        if (0 != com_sync(g_com, buf, BUFF_SIZE))
+        {
+            ret = -3;
+            break;
+        }
 
-    return 0;
+        unsigned int offset = sizeof(t_bin);
+        p_sec_head sec = (p_sec_head)(bin + 1);
+
+        for (int i = 0; i < bin->sec_num; i++)
+        {
+            if (0 != com_upload_ram(g_com, buf, BUFF_SIZE, in + offset, sec->size, sec->addr, ((i != (bin->sec_num - 1)) ? 0 : bin->entry)))
+            {
+                ret = -4;
+                break;
+            }
+
+            offset += sizeof(t_sec_head) + sec->size;
+        }
+
+    } while (0);
+
+    free(in);
+    free(buf);
+    CloseHandle(g_com);
+    return ret;
 }
 
 /**
@@ -1231,7 +1260,7 @@ int main(int argc, char **argv)
         }
         case RAM:
         {
-            return process_ram(g_arg.input, g_arg.addr, g_arg.com);
+            return process_ram(g_arg.input, g_arg.com);
         }
         default:
         {
