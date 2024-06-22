@@ -164,7 +164,7 @@ Remark: If you change anything in the configuration of miniz, you MUST also upda
 
 #ifndef MINIZ_HEADER_INCLUDED
 #define MINIZ_HEADER_INCLUDED
-
+#include <stdio.h>
 #include <stdlib.h>
 
 // Defines to completely disable specific portions of miniz.c:
@@ -185,7 +185,7 @@ Remark: If you change anything in the configuration of miniz, you MUST also upda
 #define MINIZ_NO_ARCHIVE_WRITING_APIS
 
 // Define MINIZ_NO_ZLIB_APIS to remove all ZLIB-style compression/decompression API's.
-#define MINIZ_NO_ZLIB_APIS
+//#define MINIZ_NO_ZLIB_APIS
 
 // Define MINIZ_NO_ZLIB_COMPATIBLE_NAME to disable zlib names, to prevent conflicts against stock zlib.
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
@@ -194,7 +194,7 @@ Remark: If you change anything in the configuration of miniz, you MUST also upda
 // Note if MINIZ_NO_MALLOC is defined then the user must always provide custom user alloc/free/realloc
 // callbacks to the zlib and archive API's, and a few stand-alone helper API's which don't provide custom user
 // functions (such as tdefl_compress_mem_to_heap() and tinfl_decompress_mem_to_heap()) won't work.
-#define MINIZ_NO_MALLOC
+//#define MINIZ_NO_MALLOC
 
 #if defined(__TINYC__) && (defined(__linux) || defined(__linux__))
   // TODO: Work around "error: include file 'sys\utime.h' when compiling with tcc on Linux
@@ -835,7 +835,7 @@ size_t tdefl_compress_mem_to_mem(void *pOut_buf, size_t out_buf_len, const void 
 
 // Compresses an image to a compressed PNG file in memory.
 // On entry:
-//  pImage, w, h, and num_chans describe the image to compress. num_chans may be 1, 2, 3, or 4. 
+//  pImage, w, h, and num_chans describe the image to compress. num_chans may be 1, 2, 3, or 4.
 //  The image pitch in bytes per scanline will be w*num_chans. The leftmost pixel on the top scanline is stored first in memory.
 //  level may range from [0,10], use MZ_NO_COMPRESSION, MZ_BEST_SPEED, MZ_BEST_COMPRESSION, etc. or a decent default is MZ_DEFAULT_LEVEL
 //  If flip is true, the image will be flipped on the Y axis (useful for OpenGL apps).
@@ -1159,6 +1159,7 @@ int mz_compress2(unsigned char *pDest, mz_ulong *pDest_len, const unsigned char 
   stream.avail_out = (mz_uint32)*pDest_len;
 
   status = mz_deflateInit(&stream, level);
+
   if (status != MZ_OK) return status;
 
   status = mz_deflate(&stream, MZ_FINISH);
@@ -2794,7 +2795,7 @@ static const mz_uint s_tdefl_num_probes[11] = { 0, 1, 6, 32,  16, 32, 128, 256, 
 // level may actually range from [0,10] (10 is a "hidden" max level, where we want a bit more compression and it's fine if throughput to fall off a cliff on some files).
 mz_uint tdefl_create_comp_flags_from_zip_params(int level, int window_bits, int strategy)
 {
-  mz_uint comp_flags = s_tdefl_num_probes[(level >= 0) ? MZ_MIN(10, level) : MZ_DEFAULT_LEVEL] | ((level <= 3) ? TDEFL_GREEDY_PARSING_FLAG : 0);
+  mz_uint comp_flags = s_tdefl_num_probes[(level >= 0) ? MZ_MIN(10, level) : 6/*MZ_DEFAULT_LEVEL*/] | ((level <= 3) ? TDEFL_GREEDY_PARSING_FLAG : 0);
   if (window_bits > 0) comp_flags |= TDEFL_WRITE_ZLIB_HEADER;
 
   if (!level) comp_flags |= TDEFL_FORCE_ALL_RAW_BLOCKS;
@@ -4457,7 +4458,7 @@ mz_bool mz_zip_writer_add_file(mz_zip_archive *pZip, const char *pArchive_name, 
 
   if (!mz_zip_get_file_modified_time(pSrc_filename, &dos_time, &dos_date))
     return MZ_FALSE;
-    
+
   pSrc_file = MZ_FOPEN(pSrc_filename, "rb");
   if (!pSrc_file)
     return MZ_FALSE;

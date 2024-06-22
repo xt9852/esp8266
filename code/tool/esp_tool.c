@@ -32,11 +32,10 @@ enum
 {
     APP = 0,
     OTA,                                    // 生成OTA数据
-    CVS,                                    // 生成分区表数据
+    CSV,                                    // 生成分区表数据
     BIN,                                    // 生成BIN数据
     ROM,                                    // 烧录固件
     RAM,                                    // 向内存写入数据
-    F12,                                    // ESP8266型号:12F
 };
 
 typedef struct _arg
@@ -45,7 +44,6 @@ typedef struct _arg
     unsigned int            com;            // 串口号
     unsigned int            size;           // 数据的长度
     unsigned int            addr;           // 数据的地址
-    unsigned int            model;          // 型号:12F
     unsigned int            version;        // 版本:1,3
     const char              *input;         // 输入文件
     const char              *output;        // 输出文件
@@ -167,111 +165,80 @@ unsigned char com_checksum(unsigned char *data, unsigned int data_len, unsigned 
     return checksum;
 }
 
-int get_file_data(const char *filename, void *buf, unsigned int max_len)
+int get_file_data(const char *filename, void *buf, unsigned int *len)
 {
+    unsigned int max = *len;
+
     FILE *fp = NULL;
 
-    if (0 != fopen_s(&fp, filename, "rb"))
+    if (fopen_s(&fp, filename, "rb") != 0)
     {
-        printf("open %s error\n", filename);
+        printf("open:%s error %d\n", filename, errno);
         return -1;
     }
 
-    printf("open %s ok\n", filename);
+    printf("open:%s ok\n", filename);
 
-    unsigned int len = fread(buf, 1, max_len, fp);
+    *len = fread(buf, 1, max, fp);
 
     fclose(fp);
 
-    if (len == max_len)
+    if (*len == max)
     {
-        printf("file too big\n");
+        printf("file too big max:%d\n", max);
         return -2;
     }
 
-    return len;
+    printf("read len:%d\n", *len);
+    return 0;
 }
 
 int put_file_data(const char *filename, void *buf, unsigned int len)
 {
     FILE *fp = NULL;
 
-    if (0 != fopen_s(&fp, filename, "wb+"))
+    if (fopen_s(&fp, filename, "wb+") != 0)
     {
-        printf("open %s error\n", filename);
+        printf("make:%s error %d\n", filename, errno);
         return -1;
     }
 
-    printf("create %s ok\n", filename);
+    printf("make:%s ok\n", filename);
 
-    fwrite(buf, 1, len, fp);
+    len = fwrite(buf, 1, len, fp);
     fclose(fp);
-    return len;
+
+    printf("write len:%d\n", len);
+    return 0;
 }
 
 void com_printf_data(unsigned char *data, unsigned int len)
 {
-    printf("\n");
-    printf("      00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F\n");
-    printf("     --------------------------------------------------\n");
-
     for (unsigned int i = 0; i < len; i++)
     {
-        if ((i % 16) == 0)
-        {
-            printf("%04X|", i / 16);
-        }
-
-        if ((i % 16) == 8)
-        {
-            printf(" ");
-        }
-
-        printf(" %02x", data[i]);
-
-        if ((i % 16) == 15)
-        {
-            printf(" |\n");
-        }
+        printf("%02x ", data[i]);
     }
 
-    int pad = ((len % 16) == 0) ? 0 : (16 - len % 16);
-
-    if (pad > 0)
-    {
-        for (int i = 0; i < pad; i++)
-        {
-            printf("   ");
-        }
-
-        if (pad >= 8)
-        {
-            printf(" ");
-        }
-
-        printf(" |\n");
-    }
-
-    printf("     --------------------------------------------------\n\n");
+    printf("\n");
 }
 
-HANDLE com_open(int com, int BaudRate, int ByteSize, int Parity, int StopBits, int reboot)
+int com_open(int com, int BaudRate, int ByteSize, int Parity, int StopBits, int reboot, HANDLE *handle)
 {
     char name[16];
     snprintf(name, sizeof(name) - 1, "com%d", com);
 
-    HANDLE handle = CreateFileA(name,                           // 串口名
-                                GENERIC_READ | GENERIC_WRITE,   // 支持读写
-                                0,                              // 独占方式，串口不支持共享
-                                NULL,                           // 安全属性指针，默认值为NULL
-                                OPEN_EXISTING,                  // 打开现有的串口文件
-                                0,                              // 0：同步方式，FILE_FLAG_OVERLAPPED：异步方式
-                                NULL);                          // 用于复制文件句柄，默认值为NULL，对串口而言该参数必须置为NULL
+    *handle = CreateFileA(name,                           // 串口名
+                          GENERIC_READ | GENERIC_WRITE,   // 支持读写
+                          0,                              // 独占方式，串口不支持共享
+                          NULL,                           // 安全属性指针，默认值为NULL
+                          OPEN_EXISTING,                  // 打开现有的串口文件
+                          0,                              // 0：同步方式，FILE_FLAG_OVERLAPPED：异步方式
+                          NULL);                          // 用于复制文件句柄，默认值为NULL，对串口而言该参数必须置为NULL
 
-    if (handle < 0)
+    if (INVALID_HANDLE_VALUE == *handle)
     {
         printf("COM%d open fail\n", com);
-        return (HANDLE)-1;
+        return -1;
     }
 
     DCB p = { 0 };
@@ -281,68 +248,85 @@ HANDLE com_open(int com, int BaudRate, int ByteSize, int Parity, int StopBits, i
     p.Parity    = Parity;       // 无校验
     p.StopBits  = StopBits;     // 1位停止位
 
-    if (!SetCommState(handle, &p))
+    if (!SetCommState(*handle, &p))
     {
         printf("COM%d set fail (%d %d %d %d)\n", com, BaudRate, ByteSize, Parity, StopBits);
-        CloseHandle(handle);
-        return (HANDLE)-2;
+        CloseHandle(*handle);
+        return -2;
     }
 
     printf("COM%d open success (%d %d %d %d)\n", com, BaudRate, ByteSize, Parity, StopBits);
 
-    if (!PurgeComm(handle, PURGE_TXCLEAR | PURGE_RXCLEAR)) // 清空串口缓冲区
+    if (!PurgeComm(*handle, PURGE_TXCLEAR | PURGE_RXCLEAR)) // 清空串口缓冲区
     {
         printf("COM%d PurgeComm fail\n", com);
-        CloseHandle(handle);
-        return (HANDLE)-5;
+        CloseHandle(*handle);
+        return -3;
     }
 
-    return handle;
+    return 0;
 }
 
 void com_close(HANDLE handle)
 {
-     printf("close com %d\n", (int)handle);
-     CloseHandle(handle);
+    printf("close handle %x\n", (unsigned int)handle);
+    CloseHandle(handle);
 }
 
-void com_reboot_to_loader(unsigned int com)
+int com_reboot_to_loader(unsigned int com)
 {
-    HANDLE handle = com_open(com, 74880, 8, 0, 1, 1);
+    if (com_open(com, 74880, 8, 0, 1, 1, &g_com) != 0)
+    {
+        printf("com_reboot_to_loader fail\n");
+        return -1;
+    }
 
-    if (handle < 0) return;
+    printf("set reboot to ROM Loader\n");
 
-    EscapeCommFunction(handle, SETRTS); // 重启1
-    EscapeCommFunction(handle, CLRRTS); // 重启2
-    EscapeCommFunction(handle, SETDTR); // 设置GPIO,ESP8266进入到串口下载模式
+    EscapeCommFunction(g_com, SETRTS); // 重启1
+    EscapeCommFunction(g_com, CLRRTS); // 重启2
+    EscapeCommFunction(g_com, SETDTR); // 设置GPIO,ESP8266进入到串口下载模式
     Sleep(100);                         // 等待不能删除
-    EscapeCommFunction(handle, CLRDTR); // 清空
-    EscapeCommFunction(handle, CLRRTS); // 清空
+    EscapeCommFunction(g_com, CLRDTR); // 清空
+    EscapeCommFunction(g_com, CLRRTS); // 清空
 
-    CloseHandle(handle);
+    com_close(g_com);
+    return 0;
+}
+
+int com_compress(const char *in, unsigned int in_len, unsigned char *out, unsigned int *out_len)
+{
+    if (mz_compress2(out, out_len, in, in_len, 9) != MZ_OK)
+    {
+        printf("mz_compress2 fail\n");
+        return -1;
+    }
+
+    printf("compress data in_len:%d out_len:%d\n", in_len, *out_len);
+    return 0;
 }
 
 int com_decompress(const char *in, unsigned int in_len, unsigned char *out, unsigned int *out_len)
 {
-    printf("base64 len:%d\n", in_len);
+    printf("base64 string len:%d\n", in_len);
 
     unsigned char *tmp     = (unsigned char*)malloc(BUFF_SIZE);
     unsigned int   tmp_len = BUFF_SIZE;
 
-    if (0 != base64_decode(in, in_len, tmp, &tmp_len))
+    if (base64_decode(in, in_len, tmp, &tmp_len) != 0)
     {
         free(tmp);
         printf("base64_decode fail\n");
         return -1;
     }
 
-    printf("base64 data len:%d\n", tmp_len);
+    printf("base64 data   len:%d\n", tmp_len);
 
     int flags = TINFL_FLAG_PARSE_ZLIB_HEADER; // 还有数据时 |= TINFL_FLAG_HAS_MORE_INPUT
     tinfl_decompressor inflator;
     tinfl_init(&inflator);
 
-    if (0 != tinfl_decompress(&inflator, tmp, &tmp_len, out, out, out_len, flags))
+    if (tinfl_decompress(&inflator, tmp, &tmp_len, out, out, out_len, flags) != 0)
     {
         free(tmp);
         printf("tinfl_decompress fail\n");
@@ -350,26 +334,21 @@ int com_decompress(const char *in, unsigned int in_len, unsigned char *out, unsi
     }
 
     free(tmp);
-    printf("file   data len:%d\n", *out_len);
+    printf("unzip  data   len:%d\n", *out_len);
     return 0;
 }
 
 int com_send(HANDLE handle, unsigned char *buf, unsigned int len)
 {
-    unsigned int      tmp;
-    unsigned int      num;
-    unsigned char    *ptr;
-    unsigned char    out[5] = { 0xc0, 0xdb, 0xdc, 0xdb, 0xdd };
-    p_esp_loader_req req    = (p_esp_loader_req)buf;
+    unsigned int        tmp;
+    unsigned int        num     = 1;
+    unsigned int        pos     = 0;
+    unsigned char       out[5]  = { 0xc0, 0xdb, 0xdc, 0xdb, 0xdd };
+    p_esp_loader_req    req     = (p_esp_loader_req)buf;
 
     printf("send magic:%d op:%x data_len:%d checksum:0x%08x\n", req->head.zero, req->head.op, req->head.data_len, req->head.checksum);
 
-    for (int i = 0; i < req->head.data_len / 4 && i < 9; i++)
-    {
-        printf("data[%d]:0x%08x\n", i, req->data[i]);
-    }
-
-    com_printf_data(buf, len);
+    com_printf_data(buf, (req->head.op == 0x03 || req->head.op == 0x07 || req->head.op == 0x11) ? 16 : req->head.data_len);
 
     if (!WriteFile(handle, out, 1, &tmp, NULL)) // SLIP协议固定头0xc0
     {
@@ -377,42 +356,62 @@ int com_send(HANDLE handle, unsigned char *buf, unsigned int len)
         return -1;
     }
 
-    num = 1;
-
     for (unsigned int i = 0; i < len; i++)
     {
         if (0xc0 == buf[i])
         {
-            tmp = 2;
-            ptr = out + 1;
+            if (!WriteFile(handle, buf + pos, i - pos, &tmp, NULL))
+            {
+                printf("com:%d send data2 %d %d\n", (int)handle, errno, GetLastError());
+                return -2;
+            }
+
+            if (!WriteFile(handle, out + 1, 2, &tmp, NULL))
+            {
+                printf("com:%d send data3 %d %d\n", (int)handle, errno, GetLastError());
+                return -3;
+            }
+
+            num += tmp;
+            pos = i + 1;
         }
         else if (0xdb == buf[i])
         {
-            tmp = 2;
-            ptr = out + 3;
-        }
-        else
-        {
-            tmp = 1;
-            ptr = buf + i;
-        }
+            if (!WriteFile(handle, buf + pos, i - pos, &tmp, NULL))
+            {
+                printf("com:%d send data4 %d %d\n", (int)handle, errno, GetLastError());
+                return -4;
+            }
 
-        if (!WriteFile(handle, ptr, tmp, &tmp, NULL))
-        {
-            printf("com:%d send data %d %d\n", (int)handle, errno, GetLastError());
-            return -2;
-        }
+            if (!WriteFile(handle, out + 3, 2, &tmp, NULL))
+            {
+                printf("com:%d send data5 %d %d\n", (int)handle, errno, GetLastError());
+                return -5;
+            }
 
-        num += tmp;
+            num += tmp;
+            pos = i + 1;
+        }
     }
+
+    if (pos < len)
+    {
+        if (!WriteFile(handle, buf + pos, len - pos, &tmp, NULL))
+        {
+            printf("com:%d send data %d6 %d\n", (int)handle, errno, GetLastError());
+            return -6;
+        }
+    }
+
+    num += tmp;
 
     if (!WriteFile(handle, out, 1, &tmp, NULL))  // SLIP协议固定尾0xc0
     {
         printf("com:%d send end(0xc0) %d %d\n", (int)handle, errno, GetLastError());
-        return -3;
+        return -7;
     }
 
-    num++;
+    num += tmp;
 
     printf("send data %d %d\n", len, num);
     return len;
@@ -467,29 +466,26 @@ int com_recv(HANDLE handle, unsigned char *buf, unsigned int max_len)
         }
     }
 
+    int ret = 0;
     p_esp_loader_rsp rsp = (p_esp_loader_rsp)(buf + 1);
 
     if (0x48 != rsp->op)
     {
-        for (int i = 0; i < rsp->data_len; i++)
-        {
-            printf("[%d]=%02x\n", i, rsp->data[i]);
-        }
-
-        int ret = rsp->data[rsp->data_len - 1];
-        printf("recv data %d %d\nmagic:%d op:%x data_len:%d value:0x%08x ret:%d\n", len, j, rsp->one, rsp->op, rsp->data_len, rsp->value, ret);
-        return ret;
+        ret = rsp->data[rsp->data_len - 1];
+        printf("recv data %d %d\n", len, j);
+        printf("magic:%d op:%x data_len:%d value:0x%08x ret:%d\n", rsp->one, rsp->op, rsp->data_len, rsp->value, ret);
     }
     else
     {
-        printf("recv data OHAI\n");
-        return 0;
+        printf("recv data OHAI !!!\n");
     }
+
+    printf("--------------------------------------------------\n");
+    return ret;
 }
 
 int com_send_recv(HANDLE handle, unsigned char *buf, unsigned int max_len, const char *info)
 {
-    printf("----------------------------------------------------------------------\n");
     printf("send %s\n", info);
 
     p_esp_loader_req req = (p_esp_loader_req)buf;
@@ -499,8 +495,7 @@ int com_send_recv(HANDLE handle, unsigned char *buf, unsigned int max_len, const
         return -1;
     }
 
-    printf("--------------------------------\n");
-    printf("recv %s\n", info);
+    printf("recv wait\n");
 
     return com_recv(g_com, buf, max_len);
 }
@@ -516,7 +511,6 @@ int com_sync(HANDLE handle, unsigned char *buf, unsigned int max_len)
     req->data[0]         = 0x20120707;
     memset(req->data + 1, 0x55, 32);
 
-    printf("----------------------------------------------------------------------\n");
     printf("send sync1\n");
 
     if (com_send(handle, buf, sizeof(req->head) + req->head.data_len) <= 0) // 发送2个同步命令,收到8个应答,只发1个不应答
@@ -524,7 +518,6 @@ int com_sync(HANDLE handle, unsigned char *buf, unsigned int max_len)
         return -1;
     }
 
-    printf("----------------------------------------------------------------------\n");
     printf("send sync2\n");
 
     if (com_send(handle, buf, sizeof(req->head) + req->head.data_len) <= 0)
@@ -534,7 +527,6 @@ int com_sync(HANDLE handle, unsigned char *buf, unsigned int max_len)
 
     for (int i = 0; i < 8; i++)
     {
-        printf("----------------------------------------------------------------------\n");
         printf("recv sync %d\n", i);
 
         if (com_recv(g_com, buf, max_len) != 0)
@@ -579,21 +571,18 @@ int com_set_flash_param(HANDLE handle, unsigned char *buf, unsigned int max_len)
 
 int com_upload_rom(HANDLE handle, unsigned char *buf, unsigned int max_len, unsigned char *data, unsigned int data_len, unsigned int addr, int reboot)
 {
-    unsigned char md5_data[16];
-    md5(data, data_len, md5_data);
+    unsigned int   in_len = BUFF_SIZE;
+    unsigned char *in = (unsigned char*)malloc(BUFF_SIZE);
 
-    for (int i = 0; i < 16; i++)
-    {
-        printf("md5[i]:%02x\n", md5_data[i]);
-    }
+    if (com_compress(data, data_len, in, &in_len) != 0) return -1;
 
     unsigned int size = 0x4000;
-    unsigned int num = (data_len + size - 1) / size;
+    unsigned int num = (in_len + size - 1) / size;
 
     // 0x10|向Flash写数据开始|未压缩大小,包数量,包大小,地址
     p_esp_loader_req req = (p_esp_loader_req)buf;
     req->head.zero       = 0;
-    req->head.op         = 0x05;
+    req->head.op         = 0x10;
     req->head.data_len   = 16;
     req->head.checksum   = 0;
     req->data[0]         = data_len;
@@ -601,24 +590,24 @@ int com_upload_rom(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
     req->data[2]         = size;
     req->data[3]         = addr;
 
-    if (0 != com_send_recv(handle, buf, max_len, "write bin begin")) return -2;
+    if (com_send_recv(handle, buf, max_len, "write rom begin") != 0) return -2;
 
     for (unsigned int i = 0; i < num; i++)
     {
-        int len = ((i != (num - 1)) ? size : (data_len % size));
+        int len = ((i != (num - 1)) ? size : (in_len % size));
 
         // 0x11|向Flash写数据|数据大小,序列号,0x00,0x00
         req->head.zero       = 0;
         req->head.op         = 0x11;
         req->head.data_len   = len + 16;
-        req->head.checksum   = com_checksum(data + size * i, len, 0xef);
+        req->head.checksum   = com_checksum(in + size * i, len, 0xef);
         req->data[0]         = len;
         req->data[1]         = i;
         req->data[2]         = 0;
         req->data[3]         = 0;
-        memcpy(req->data + 4, data + size * i, len);
+        memcpy(req->data + 4, in + size * i, len);
 
-        if (0 != com_send_recv(handle, buf, max_len, "write bin data")) return -3;
+        if (com_send_recv(handle, buf, max_len, "write rom data") != 0) return -3;
     }
 
     // 0x13|Flash数据MD5|地址,大小,0x00,0x00
@@ -631,11 +620,14 @@ int com_upload_rom(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
     req->data[2]         = 0;
     req->data[3]         = 0;
 
-    if (0 != com_send_recv(handle, buf, max_len, "write bin md5")) return -4;
+    if (com_send_recv(handle, buf, max_len, "write rom md5") != 0) return -4;
+
+    unsigned char md5_data[16];
+    md5(data, data_len, md5_data);
 
     p_esp_loader_rsp rsp = (p_esp_loader_rsp)(buf + 1);
 
-    printf("md5 check %s\n", (0 == memcmp(rsp->data, md5_data, sizeof(md5_data))) ? "ok" : "fail!!!");
+    printf("md5 check %s\n", (memcmp(rsp->data, md5_data, sizeof(md5_data)) == 0) ? "ok" : "fail!!!");
 
     if (!reboot) return 0;
 
@@ -661,7 +653,7 @@ int com_upload_ram(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
     req->data[2]         = size;
     req->data[3]         = addr;
 
-    if (0 != com_send_recv(handle, buf, max_len, "write ram begin")) return -3;
+    if (com_send_recv(handle, buf, max_len, "write ram begin") != 0) return -3;
 
     for (unsigned int i = 0; i < num; i++)
     {
@@ -678,7 +670,7 @@ int com_upload_ram(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
         req->data[3]         = 0;
         memcpy(req->data + 4, data + size * i, len);
 
-        if (0 != com_send_recv(handle, buf, max_len, "write ram data")) return -4;
+        if (com_send_recv(handle, buf, max_len, "write ram data") != 0) return -4;
     }
 
     if (!entry) return 0;
@@ -691,9 +683,8 @@ int com_upload_ram(HANDLE handle, unsigned char *buf, unsigned int max_len, unsi
     req->data[0]         = 0;
     req->data[1]         = entry;
 
-    if (0 != com_send_recv(handle, buf, max_len, "write ram end")) return -7;
+    if (com_send_recv(handle, buf, max_len, "write ram end") != 0) return -7;
 
-    printf("--------------------------------\n");
     printf("recv OHAI\n");
 
     return com_recv(g_com, buf, max_len);
@@ -709,28 +700,28 @@ int com_upload_stub(HANDLE handle, unsigned char *buf, unsigned int max_len)
 
     do
     {
-        if (0 != com_decompress(STUB_TEXT, sizeof(STUB_TEXT), sub_text, &text_len))
+        if (com_decompress(STUB_TEXT, sizeof(STUB_TEXT), sub_text, &text_len) != 0)
         {
             printf("com_decompress sub_text fail\n");
             ret = -1;
             break;
         }
 
-        if (0 != com_decompress(STUB_DATA, sizeof(STUB_DATA), sub_data, &data_len))
+        if (com_decompress(STUB_DATA, sizeof(STUB_DATA), sub_data, &data_len) != 0)
         {
             printf("com_decompress sub_data fail\n");
             ret = -2;
             break;
         }
 
-        if (0 != com_upload_ram(handle, buf, max_len, sub_text, text_len, STUB_TEXT_ADDR, 0))
+        if (com_upload_ram(handle, buf, max_len, sub_text, text_len, STUB_TEXT_ADDR, 0) != 0)
         {
             printf("com_upload_ram sub_text fail\n");
             ret = -3;
             break;
         }
 
-        if (0 != com_upload_ram(handle, buf, max_len, sub_data, data_len, STUB_DATA_ADDR, STUB_ENTRY_ADDR))
+        if (com_upload_ram(handle, buf, max_len, sub_data, data_len, STUB_DATA_ADDR, STUB_ENTRY_ADDR) != 0)
         {
             printf("com_upload_ram sub_data fail\n");
             ret = -4;
@@ -751,11 +742,21 @@ int com_upload_stub(HANDLE handle, unsigned char *buf, unsigned int max_len)
  */
 void printf_info()
 {
-    printf("esp_app.exe ota -size=0x1000 -o=output.bin\n");
-    printf("esp_app.exe cvs -i=input.cvs -o=output.bin\n");
-    printf("esp_app.exe bin -i=input.elf -o=output.bin -model=12F -version={1|3}\n");
-    printf("esp_app.exe rom -i=input.bin -addr=0x8000 -com=4\n");
-    printf("esp_app.exe ram -i=input.bin -com=4\n");
+    //printf("esp_app.exe ota -size=0x1000 -o=output.bin\n");
+    //printf("esp_app.exe csv -i=input.csv -o=output.bin\n");
+    //printf("esp_app.exe bin -i=input.elf -o=output.bin -model=12F -version={1|3}\n");
+    //printf("esp_app.exe rom -i=input.bin -addr=0x10000 -com=1\n");
+    //printf("esp_app.exe ram -i=input.bin -com=1\n");
+
+    printf("esp_app.exe ota -o=3_otadata.bin -size=0x2000\n");
+    printf("esp_app.exe csv -o=2_partitions.bin -i=..\\conf\\partitions_two_ota.csv \n");
+    printf("esp_app.exe bin -o=1_bootloader.bin -i=..\\conf\\bootloader.elf -version=1\n");
+    printf("esp_app.exe bin -o=4_app.bin -i=..\\conf\\esp_app.elf -version=3\n");
+    printf("esp_app.exe rom -i=1_bootloader.bin -addr=0x0000 -com=5\n");
+    printf("esp_app.exe rom -i=2_partitions.bin -addr=0x8000 -com=5\n");
+    printf("esp_app.exe rom -i=3_otadata.bin -addr=0xd000 -com=5\n");
+    printf("esp_app.exe rom -i=4_app.bin -addr=0x10000 -com=5\n");
+    printf("esp_app.exe ram -i=4_app.bin -com=5\n");
 }
 
 /**
@@ -766,45 +767,55 @@ void printf_info()
  */
 int check_args(int argc, char **argv, p_arg arg)
 {
+    const char *com;
     const char *addr;
     const char *size;
-    const char *model;
     const char *input;
     const char *output;
     const char *version;
 
-    if (0 == strcmp(argv[1], "ota") && NULL != argv[2] && NULL != argv[3] && (size = strstr(argv[2], "-size=0x")) && (output = strstr(argv[3], "-o=")))
+    if (strcmp(argv[1], "ota") == 0 && NULL != argv[2] && NULL != argv[3] && (output = strstr(argv[2], "-o=")) && (size = strstr(argv[3], "-size=0x")))
     {
         arg->type   = OTA;
         arg->size   = strtol(size + 8, NULL, 16);
         arg->output = output + 3;
+
+        printf("output:%s\nsize:0x%x\n", arg->output, arg->size);
     }
-    else if (0 == strcmp(argv[1], "cvs") && NULL != argv[2] && NULL != argv[3] && (input = strstr(argv[2], "-i=")) && (output = strstr(argv[3], "-o=")))
+    else if (strcmp(argv[1], "csv") == 0 && NULL != argv[2] && NULL != argv[3] && (output = strstr(argv[2], "-o=")) && (input = strstr(argv[3], "-i=")))
     {
-        arg->type   = CVS;
+        arg->type   = CSV;
         arg->input  = input + 3;
         arg->output = output + 3;
+
+        printf("output:%s\ninput:%s\n", arg->output, arg->input);
     }
-    else if (0 == strcmp(argv[1], "bin") && NULL != argv[2] && NULL != argv[3] && NULL != argv[4] && NULL != argv[5]  && (input = strstr(argv[2], "-i=")) && (output = strstr(argv[3], "-o="))&& (model = strstr(argv[4], "-model=12F")) && (version = strstr(argv[5], "-version=")))
+    else if (strcmp(argv[1], "bin") == 0 && NULL != argv[2] && NULL != argv[3] && NULL != argv[4] && (output = strstr(argv[2], "-o=")) && (input = strstr(argv[3], "-i=")) && (version = strstr(argv[4], "-version=")))
     {
         arg->type    = BIN;
-        arg->model   = F12;
-        arg->version = atoi(version + 9);
         arg->input   = input + 3;
         arg->output  = output + 3;
+        arg->version = atoi(version + 9);
+
+        printf("output:%s\ninput:%s\nversion:%d\n", arg->output, arg->input, arg->version);
     }
-    else if (0 == strcmp(argv[1], "rom") && NULL != argv[2] && NULL != argv[3] && NULL != argv[4] && (input = strstr(argv[2], "-i=")) && (addr = strstr(argv[3], "-addr=0x")) && (addr = strstr(argv[4], "-com=")))
+    else if (strcmp(argv[1], "rom") == 0 && NULL != argv[2] && NULL != argv[3] && NULL != argv[4] &&
+            (input = strstr(argv[2], "-i=")) && (addr = strstr(argv[3], "-addr=0x")) && (com = strstr(argv[4], "-com=")))
     {
         arg->type  = ROM;
-        arg->com   = atoi(addr + 5);
-        arg->addr  = strtol(addr + 8, NULL, 16);
         arg->input = input + 3;
+        arg->addr  = strtol(addr + 8, NULL, 16);
+        arg->com   = atoi(com + 5);
+
+        printf("input:%s\naddr=0x%x\ncom:%d\n", arg->input, arg->addr, arg->com);
     }
-    else if (0 == strcmp(argv[1], "ram") && NULL != argv[2] && NULL != argv[3] && (input = strstr(argv[2], "-i=")) && (addr = strstr(argv[3], "-com=")))
+    else if (strcmp(argv[1], "ram") == 0 && NULL != argv[2] && NULL != argv[3] && (input = strstr(argv[2], "-i=")) && (com = strstr(argv[3], "-com=")))
     {
         arg->type  = RAM;
-        arg->com   = atoi(addr + 5);
         arg->input = input + 3;
+        arg->com   = atoi(com + 5);
+
+        printf("input:%s\ncom:%d\n", arg->input, arg->com);
     }
     else
     {
@@ -822,24 +833,16 @@ int check_args(int argc, char **argv, p_arg arg)
  */
 int process_ota(unsigned int size, const char *output)
 {
-    FILE *fp = NULL;
+    unsigned char *in = (unsigned char *)malloc(size);
+    memset(in, 0xFF, size);
 
-    if (0 != fopen_s(&fp, output, "wb+"))
+    if (put_file_data(output, in, size) != 0)
     {
-        printf("open %s error\n", output);
+        free(in);
         return -1;
     }
 
-    unsigned char *data = (unsigned char *)malloc(size);
-
-    memset(data, 0xFF, size);
-
-    fwrite(data, 1, size, fp);
-
-    fclose(fp);
-
-    free(data);
-
+    free(in);
     printf("%s size:0x%x ok\n", output, size);
     return 0;
 }
@@ -894,40 +897,39 @@ int process_ota(unsigned int size, const char *output)
 int process_csv(const char *input, const char *output)
 {
     int  line_num;
-    char line_dat[96][1024];
+    char line[96][1024];
     FILE *fp;
 
-    if (0 != fopen_s(&fp, input, "rb"))
+    if (fopen_s(&fp, input, "rb") != 0)
     {
         printf("open %s error\n", input);
         return -1;
     }
 
-    for(line_num = 0; line_num < 96 && NULL != fgets(line_dat[line_num], sizeof(line_dat[0]) - 1, fp); line_num++);
-
+    for(line_num = 0; line_num < 96 && fgets(line[line_num], sizeof(line[0]) - 1, fp) != NULL; line_num++);
     fclose(fp);
 
-    char *id;
-    char sub[64];
-    char type[64];
-    int len     = 0;
-    int num     = 0;
-    int end     = 0;
-    int align[] = { 0x1000, 0x04 }; // app, data
-    t_cvs *ptr  = NULL;
+    char  *id;
+    char  sub[64];
+    char  type[64];
+    int   len     = 0;
+    int   num     = 0;
+    int   end     = 0;
+    int   align[] = { 0x1000, 0x04 }; // app, data
+    t_cvs *ptr    = NULL;
     t_cvs cvs[96];
 
     memset(&cvs, 0xFF, sizeof(cvs));
 
     for (int i = 0; i < line_num; i++)
     {
-        if (1 == sscanf_s(line_dat[i], "%s", type, sizeof(type) - 1) && '#' == type[0]) continue;// 注释
+        if (sscanf_s(line[i], "%s", type, sizeof(type) - 1) == 1 && '#' == type[0]) continue;// 注释
 
         ptr = &(cvs[num++]);
 
-        if (5 != sscanf_s(line_dat[i], "%[^,], %[^,], %[^,], 0x%x, 0x%x", ptr->name, sizeof(ptr->name) - 1, type, sizeof(type) - 1, sub, sizeof(sub) - 1, &(ptr->offset), &(ptr->size)))
+        if (sscanf_s(line[i], "%[^,], %[^,], %[^,], 0x%x, 0x%x", ptr->name, sizeof(ptr->name) - 1, type, sizeof(type) - 1, sub, sizeof(sub) - 1, &(ptr->offset), &(ptr->size)) != 5)
         {
-            printf("error line:%s\n", line_dat[i]);
+            printf("error line:%s\n", line[i]);
             return -2;
         }
 
@@ -968,8 +970,7 @@ int process_csv(const char *input, const char *output)
 
     printf("%s num:%d ok\n", output, num);
 
-    put_file_data(output, &cvs, sizeof(cvs));
-    return 0;
+    return put_file_data(output, &cvs, sizeof(cvs));
 }
 
 /**
@@ -980,14 +981,18 @@ int process_csv(const char *input, const char *output)
  * \param   [in]  unsigned int      versio          BIN版本
  * \return        int                               0:成功,其它失败
  */
-int process_bin(const char *input, const char *output, unsigned int model, unsigned int version)
+int process_bin(const char *input, const char *output, unsigned int version)
 {
-    char           *in = (char*)malloc(BUFF_SIZE);
-    char           *out = (char*)malloc(BUFF_SIZE);
-    p_Elf32_Ehdr    elf = (p_Elf32_Ehdr)in;
+    unsigned int    in_len = BUFF_SIZE;
+    unsigned char*  in     = (unsigned char*)malloc(BUFF_SIZE);
 
-    if (get_file_data(input, in, BUFF_SIZE) < 0) return -1;
+    if (get_file_data(input, in, &in_len) != 0)
+    {
+        free(in);
+        return -1;
+    }
 
+    p_Elf32_Ehdr elf = (p_Elf32_Ehdr)in;
     printf("e_entry:     \t0x%x\n", elf->e_entry);
     printf("e_shoff:     \t0x%x\n", elf->e_shoff);
     printf("e_shentsize: \t0x%x\n", elf->e_shentsize);
@@ -1004,16 +1009,12 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
     p_Elf32_Shdr section = (p_Elf32_Shdr)(in + elf->e_shoff);
     const char  *name = in + section[elf->e_shstrndx].sh_offset;
 
-    printf("name:%s\n", name);
-
     for (int i = 0; i < elf->e_shnum; i++, section++)
     {
-        printf("%s\n", name + section->sh_name);
-
         if (1 == section->sh_type  && 0 != section->sh_addr && 0 != section->sh_size)
         {
-            id = (0 != strncmp(name + section->sh_name, ".flash.", 7));
-            ro = ((0 == strcmp(name + section->sh_name, ".flash.rodata")) ? 8 : 0);
+            id = (strncmp(name + section->sh_name, ".flash.", 7) != 0);
+            ro = (strcmp(name + section->sh_name, ".flash.rodata") == 0 ? 8 : 0);
 
             ptr = &(sec[id][num[id]]);
             ptr->offset   = section->sh_offset + ro;
@@ -1021,12 +1022,17 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
             ptr->head.size = section->sh_size - ro;
 
             len = ptr->head.size;
-            pad = (0 == len % 4) ? 0 : (4 - len % 4); // 4字节对齐,需要补齐
+            pad = (len % 4 == 0) ? 0 : (4 - len % 4); // 4字节对齐,需要补齐
             ptr->head.size += pad;
             memset(in + ptr->offset + len, 0, pad);
 
+            printf("sec[%d][%d]name:\t%s\n",        id, num[id], name + section->sh_name);
+            printf("sec[%d][%d]offset:0x%x\n",      id, num[id], section->sh_offset);
+            printf("sec[%d][%d]addr:\t0x%x\n",      id, num[id], section->sh_addr);
+            printf("sec[%d][%d]size:\t0x%x\n",      id, num[id], section->sh_size);
+            printf("sec[%d][%d]pad:\t%d\n",         id, num[id], pad);
+
             num[id]++;
-            printf("%s\taddr:0x%x off:0x%05x size:0x%05x pad:%d\n", name + section->sh_name, section->sh_addr, section->sh_offset, section->sh_size, pad);
         }
     }
 
@@ -1052,32 +1058,32 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
         }
     }
 
+    unsigned char *out = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char checksum = 0xef; // 计算xor校验码,只校验段数据部分,最后补齐16字节对齐,为了放校验码最少有1位,最多16位
+
     // 文件头
     t_bin head = { 0xE9, num[0] + num[1], 0x02, (3 == version) ? 0x20 : 0x40, elf->e_entry};
     len = sizeof(head);
     memcpy(out, &head, len);
-
-    // 计算xor校验码,只校验段数据部分,最后补齐16字节对齐,为了放校验码最少有1位,最多16位
-    unsigned char checksum = 0xef;  // 校验码
 
     for (int i = 0; i < 2; i++)
     {
         for (unsigned int j = 0; j < num[i]; j++)
         {
             ptr = &(sec[i][j]);
-
             checksum = com_checksum(in + ptr->offset, ptr->head.size, checksum);
 
             memcpy(&out[len], &(ptr->head), sizeof(ptr->head));
             len += sizeof(ptr->head);
+
             memcpy(&out[len], in + ptr->offset, ptr->head.size);
             len += ptr->head.size;
 
-            printf("section checksum %2x\n", checksum);
+            printf("checksum[%d][%d]:\t0x%2x\n", i, j, checksum);
         }
     }
 
-    pad = (0 == len % 16) ? 16 : (16 - len % 16); // 16字节对齐
+    pad = (len % 16 == 0) ? 16 : (16 - len % 16); // 16字节对齐
     memset(out + len, 0, pad - 1);
     memset(out + len + pad - 1, checksum, 1);
     len += pad;
@@ -1118,50 +1124,44 @@ int process_bin(const char *input, const char *output, unsigned int model, unsig
  */
 int process_rom(const char *input, unsigned int addr, unsigned int com)
 {
-    com_reboot_to_loader(com); // 模块重启进入串口下载模式
+    if (com_reboot_to_loader(com) != 0) return -1;  // 模块重启进入串口下载模式
 
-    int             ret     = 0;
-    unsigned int    in_len  = BUFF_SIZE;
-    unsigned int    buf_len = BUFF_SIZE;
-    unsigned char   *in     = (unsigned char*)malloc(BUFF_SIZE);
-    unsigned char   *buf    = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char*  in      = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char*  out     = (unsigned char*)malloc(BUFF_SIZE);
+    int             ret     = BUFF_SIZE;
 
-    in_len = get_file_data(input, in, BUFF_SIZE);
-
-    if (in_len < 0) return -1;
+    if (get_file_data(input, in, &ret) != 0) return -2;
 
     do
     {
-        g_com = com_open(com, 115200, 8, 0, 1, 1);
-
-        if (g_com < 0)
-        {
-            ret = -2;
-            break;
-        }
-
-        if (0 != com_sync(g_com, buf, BUFF_SIZE))
+        if (com_open(com, 115200, 8, 0, 1, 1, &g_com) != 0)
         {
             ret = -3;
             break;
         }
 
-        if (0 != com_upload_stub(g_com, buf, BUFF_SIZE))
+        if (com_sync(g_com, out, BUFF_SIZE) != 0)
         {
             ret = -4;
             break;
         }
 
-        if (0 != com_upload_rom(g_com, buf, BUFF_SIZE, in, in_len, addr, 1))
+        if (com_upload_stub(g_com, out, BUFF_SIZE) != 0)
         {
             ret = -5;
+            break;
+        }
+
+        if (com_upload_rom(g_com, out, BUFF_SIZE, in, ret, addr, 1) != 0)
+        {
+            ret = -6;
             break;
         }
 
     } while (0);
 
     free(in);
-    free(buf);
+    free(out);
     CloseHandle(g_com);
     return ret;
 }
@@ -1175,53 +1175,56 @@ int process_rom(const char *input, unsigned int addr, unsigned int com)
  */
 int process_ram(const char *input, unsigned int com)
 {
-    com_reboot_to_loader(com); // 模块重启进入串口下载模式
+    if (com_reboot_to_loader(com) != 0) return -1; // 模块重启进入串口下载模式
 
-    int             ret     = 0;
-    unsigned int    in_len  = BUFF_SIZE;
-    unsigned int    buf_len = BUFF_SIZE;
-    unsigned char   *in     = (unsigned char*)malloc(BUFF_SIZE);
-    unsigned char   *buf    = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char*  in      = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned char*  out     = (unsigned char*)malloc(BUFF_SIZE);
+    int             ret     = BUFF_SIZE;
     p_bin           bin     = (p_bin)in;
 
-    in_len = get_file_data(input, in, BUFF_SIZE);
-
-    if (in_len < 0) return -1;
+    if (get_file_data(input, in, &ret) != 0) return -2;
 
     do
     {
-        g_com = com_open(com, 115200, 8, 0, 1, 1);
-
-        if (g_com < 0)
-        {
-            ret = -2;
-            break;
-        }
-
-        if (0 != com_sync(g_com, buf, BUFF_SIZE))
+        if (com_open(com, 115200, 8, 0, 1, 1, &g_com) != 0)
         {
             ret = -3;
             break;
         }
 
+        if (com_sync(g_com, out, BUFF_SIZE) != 0)
+        {
+            ret = -4;
+            break;
+        }
+
+        printf("---------%s\n bin magic:%x sec_num:%x flash_mod:%x flash_sf:%x entry:%x",
+                input, bin->magic, bin->sec_num, bin->flash_mod, bin->flash_sf, bin->entry);
+
+        p_sec_head sec;
         unsigned int offset = sizeof(t_bin);
-        p_sec_head sec = (p_sec_head)(bin + 1);
 
         for (int i = 0; i < bin->sec_num; i++)
         {
-            if (0 != com_upload_ram(g_com, buf, BUFF_SIZE, in + offset, sec->size, sec->addr, ((i != (bin->sec_num - 1)) ? 0 : bin->entry)))
+            sec = (p_sec_head)(in + offset);
+
+            printf("%i offset:%x addr:%x size:%x\n", i, offset, sec->addr, sec->size);
+
+            offset += sizeof(t_sec_head);
+
+            if (com_upload_ram(g_com, out, BUFF_SIZE, in + offset, sec->size, sec->addr, ((i != (bin->sec_num - 1)) ? 0 : bin->entry)) != 0)
             {
-                ret = -4;
+                ret = -5;
                 break;
             }
 
-            offset += sizeof(t_sec_head) + sec->size;
+            offset += sec->size;
         }
 
     } while (0);
 
     free(in);
-    free(buf);
+    free(out);
     CloseHandle(g_com);
     return ret;
 }
@@ -1234,7 +1237,7 @@ int process_ram(const char *input, unsigned int com)
  */
 int main(int argc, char **argv)
 {
-    if (argc <= 1 || 0 != check_args(argc, argv, &g_arg))
+    if (argc <= 1 || check_args(argc, argv, &g_arg) != 0)
     {
         printf_info();
         return -1;
@@ -1246,13 +1249,13 @@ int main(int argc, char **argv)
         {
             return process_ota(g_arg.size, g_arg.output);
         }
-        case CVS:
+        case CSV:
         {
             return process_csv(g_arg.input, g_arg.output);
         }
         case BIN:
         {
-            return process_bin(g_arg.input, g_arg.output, g_arg.model, g_arg.version);
+            return process_bin(g_arg.input, g_arg.output, g_arg.version);
         }
         case ROM:
         {

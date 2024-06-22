@@ -25,7 +25,7 @@ void app_main()
     esp_chip_info_t chip_info;
     esp_chip_info(&chip_info);
 
-    ESP_LOGI(TAG, "----%s-%s-CPU:%d-REV:%d-FLASH:%dMB %s", __DATE__, __TIME__, chip_info.cores, chip_info.revision,
+    ESP_LOGI(TAG, "-------- %s-%s CPU:%d REV:%d FLASH:%dMB %s --------", __DATE__, __TIME__, chip_info.cores, chip_info.revision,
     spi_flash_get_chip_size() / (1024 * 1024), (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     config_init(&g_config, g_buff, BUFF_SIZE);

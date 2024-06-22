@@ -358,8 +358,47 @@ int config_get_nvs_data(const char *key)
 
     if (err != ESP_OK)
     {
-        ESP_LOGE(TAG, "read %s len error:%s", key, esp_err_to_name(err));
-        return -1;
+        if (ESP_ERR_NVS_NOT_FOUND == err && strcmp(key, CONFIG_WIFI_KEY) == 0)
+        {
+            config_wifi_t wifi = { WIFI_TYPE_STA, "ChinaNet-EUG9", "XT9852dxc0m" };
+            config_put_wifi(&wifi);
+            err = nvs_get_str(g_nvs, key, NULL, &len);
+        }
+        else if (ESP_ERR_NVS_NOT_FOUND == err && strcmp(key, CONFIG_MQTT_KEY) == 0)
+        {
+            config_mqtt_t mqtt = { "mqtt://broker.emqx.io:1883", "", "", "36825c95-9b21-81a5-7930-0239418a4587/esp8266",
+                                   2, { "36825c95-9b21-81a5-7930-0239418a4587/ota", "36825c95-9b21-81a5-7930-0239418a4587/msg" }, {} };
+            config_put_mqtt(&mqtt);
+            err = nvs_get_str(g_nvs, key, NULL, &len);
+        }
+        else if (ESP_ERR_NVS_NOT_FOUND == err && strcmp(key, CONFIG_HTTP_KEY) == 0)
+        {
+            config_http_t http = { 80 };
+            config_put_http(&http);
+            err = nvs_get_str(g_nvs, key, NULL, &len);
+        }
+        else if (ESP_ERR_NVS_NOT_FOUND == err && strcmp(key, CONFIG_LIGHT_KEY) == 0)
+        {
+            config_light_t light = { 0 };
+            config_put_light(&light);
+            err = nvs_get_str(g_nvs, key, NULL, &len);
+        }
+        else
+        {
+            ESP_LOGE(TAG, "read %s error set %s", key, esp_err_to_name(err));
+            return -1;
+        }
+
+        if (err == ESP_OK)
+        {
+            ESP_LOGW(TAG, "read %s ESP_ERR_NVS_NOT_FOUND use default value ok", key);
+            return 0;
+        }
+        else
+        {
+            ESP_LOGE(TAG, "read %s ESP_ERR_NVS_NOT_FOUND use default value stll error", key);
+            return -1;
+        }
     }
 
     err = nvs_get_str(g_nvs, key, g_buff, &len);
@@ -370,7 +409,6 @@ int config_get_nvs_data(const char *key)
         return -1;
     }
 
-    //ESP_LOGI(TAG, "%s %s", key, g_buff);
     return 0;
 }
 
@@ -385,26 +423,6 @@ int config_get_data(p_config config)
     p_config_mqtt  mqtt  = &(config->mqtt);
     p_config_http  http  = &(config->http);
     p_config_light light = &(config->light);
-
-    //wifi->type = WIFI_TYPE_STA;
-    //strcpy(wifi->ssid, "ChinaNet-EUG9");
-    //strcpy(wifi->password, "XT9852dxc0m");
-    //config_put_wifi(wifi);
-    //
-    //mqtt->username[0] = '\0';
-    //mqtt->password[0] = '\0';
-    //mqtt->topic_count = 2;
-    //strcpy(mqtt->broker,   "mqtt://broker.emqx.io:1883");
-    //strcpy(mqtt->clientid, "36825c95-9b21-81a5-7930-0239418a4587/esp8266");
-    //strcpy(mqtt->topic[0], "36825c95-9b21-81a5-7930-0239418a4587/ota");
-    //strcpy(mqtt->topic[1], "36825c95-9b21-81a5-7930-0239418a4587/msg");
-    //config_put_mqtt(mqtt);
-    //
-    //http->port = 80;
-    //config_put_http(http);
-    //
-    //light->on = 0;
-    //config_put_light(light);
 
     if (config_get_nvs_data(CONFIG_WIFI_KEY) != 0) return -1;
 
