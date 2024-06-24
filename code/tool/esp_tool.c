@@ -2,7 +2,7 @@
  *\file     esp_tool.c
  *\author   xt
  *\version  0.0.1
- *\brief    主模块实现,UTF-8(No BOM)
+ *\brief    主模块实现, UTF-8(No BOM)
  *          时间|事件
  *          -|-
  *          2024.06.18|创建文件

@@ -203,7 +203,7 @@ int config_get_mqtt_data(const char *json, p_config_mqtt mqtt)
         return -11;
     }
 
-    for (int i = 0; i < mqtt->topic_count; i++)
+    for (unsigned int i = 0; i < mqtt->topic_count; i++)
     {
         cJSON *item = cJSON_GetArrayItem(topic, i);
 
@@ -222,7 +222,7 @@ int config_get_mqtt_data(const char *json, p_config_mqtt mqtt)
     ESP_LOGI(TAG, "mqtt password:%s", mqtt->password);
     ESP_LOGI(TAG, "mqtt clientid:%s", mqtt->clientid);
 
-    for (int i = 0; i < mqtt->topic_count; i++)
+    for (unsigned int i = 0; i < mqtt->topic_count; i++)
     {
         ESP_LOGI(TAG, "mqtt topic[%d]:%s", i, mqtt->topic[i]);
     }
@@ -246,7 +246,7 @@ int config_get_mqtt_json_str(const p_config_mqtt mqtt, char *json)
                              CONFIG_MQTT_CLIENTID, mqtt->clientid,
                              CONFIG_MQTT_TOPIC);
 
-    for (int i = 0; i < mqtt->topic_count; i++)
+    for (unsigned int i = 0; i < mqtt->topic_count; i++)
     {
         len += sprintf(&json[len], "\"%s\",", mqtt->topic[i]);
     }

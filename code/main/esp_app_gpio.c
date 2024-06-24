@@ -208,7 +208,7 @@ void gpio_led_init(uint led)
     gpio_init(GPIO_ESP8266_LED, GPIO_MODE_OUTPUT);
 
     xTaskCreate(task_gpio_led, "led", 4096, NULL, 5, NULL);
-    
+
     gpio_led(led);
 }
 

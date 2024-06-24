@@ -18,6 +18,7 @@
 #define                 BUFF_SIZE   10240               // 缓存大小
 
 static char             g_buff[BUFF_SIZE + 1];          // 缓存
+
 static config_t         g_config;                       // 配置信息
 
 void app_main()
