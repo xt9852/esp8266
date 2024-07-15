@@ -10,8 +10,9 @@
 #include "esp_spi_flash.h"
 #include "esp_app_ota.h"
 
-static int   g_size;
-static char *g_buff;
+extern const unsigned int   g_buf_size;     ///< 缓存大小
+
+extern char                 g_buf[];        ///< 缓存,esp8266的栈比较小,所以使用堆区内存
 
 typedef enum esp_ota_firm_state
 {
@@ -59,7 +60,7 @@ int ota_send_request(const char *server, uint port, const char *uri)
         return -1;
     }
 
-    int len = snprintf(g_buff, g_size, "GET %s HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: esp-idf/1.0 esp32\r\n\r\n", uri, server, port);
+    int len = snprintf(g_buf, g_buf_size, "GET %s HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: esp-idf/1.0 esp32\r\n\r\n", uri, server, port);
 
     if (len < 0) {
         ESP_LOGE(TAG, "Failed to allocate memory for GET request buffer");
@@ -67,7 +68,7 @@ int ota_send_request(const char *server, uint port, const char *uri)
         return -2;
     }
 
-    len = send(socket_id, g_buff, len, 0);
+    len = send(socket_id, g_buf, len, 0);
 
     if (len < 0)
     {
@@ -162,7 +163,7 @@ int ota_process(const char *server, uint port, const char *uri)
 
     while (run)
     {
-        tmp = recv(socket_id, &g_buff[len], g_size - len, 0);
+        tmp = recv(socket_id, &g_buf[len], g_buf_size - len, 0);
 
         if (tmp < 0)
         {
@@ -185,10 +186,10 @@ int ota_process(const char *server, uint port, const char *uri)
             {
                 case ESP_OTA_INIT:
                 {
-                    g_buff[len] = '\0';
-                    ESP_LOGI(TAG, g_buff);
+                    g_buf[len] = '\0';
+                    ESP_LOGI(TAG, g_buf);
 
-                    char *ptr = strstr(g_buff, "Content-Length: ");
+                    char *ptr = strstr(g_buf, "Content-Length: ");
 
                     if (NULL == ptr)
                     {
@@ -200,7 +201,7 @@ int ota_process(const char *server, uint port, const char *uri)
 
                     ESP_LOGI(TAG, "Content-Length: %d", remain);
 
-                    ptr = strstr(g_buff, "\r\n\r\n"); // find data
+                    ptr = strstr(g_buf, "\r\n\r\n"); // find data
 
                     if (NULL == ptr)
                     {
@@ -209,8 +210,8 @@ int ota_process(const char *server, uint port, const char *uri)
                     }
 
                     ptr += 4;
-                    len -= (ptr - g_buff); // remain data len
-                    memcpy(g_buff, ptr, len);
+                    len -= (ptr - g_buf); // remain data len
+                    memcpy(g_buf, ptr, len);
 
                     state = ESP_OTA_RECVED;
 
@@ -219,7 +220,7 @@ int ota_process(const char *server, uint port, const char *uri)
                 }
                 case ESP_OTA_RECVED:
                 {
-                    err = esp_ota_write(handle, g_buff, len);
+                    err = esp_ota_write(handle, g_buf, len);
 
                     if (err != ESP_OK)
                     {
@@ -259,9 +260,14 @@ int ota_process(const char *server, uint port, const char *uri)
     return 0;
 }
 
+/**
+ *\brief        ota任务
+ *\param[in]    param       队列
+ *\return                   无
+ */
 static void ota_task(void *param)
 {
-    msg_head_t msg;
+    t_msg_head msg;
     xQueueHandle queue = (xQueueHandle)param;
 
     while (xQueueReceive(queue, &msg, portMAX_DELAY) == pdTRUE)
@@ -327,16 +333,12 @@ static void ota_task(void *param)
 }
 
 /**
- * \brief      初始化ota
- * \param[in]  void        *queue       队列
- * \param[in]  char        *buff        缓存
- * \param[in]  uint         size        缓存大小
- * \return     0-成功，其它失败
+ *\brief        初始化ota
+ *\param[in]    queue       队列
+ *\return       0           成功
  */
-int ota_init(void *queue, char *buff, uint size)
+int ota_init(void *queue)
 {
-    g_size = size;
-    g_buff = buff;
     xTaskCreate(&ota_task, "ota_task", 8192, queue, 5, NULL);
     return 0;
 }

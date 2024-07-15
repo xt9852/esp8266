@@ -12,13 +12,14 @@ static uint g_int0 = 0; // 中断0
 static uint g_int1 = 0; // 中断1
 
 /**
- * \brief      CPU页面数据
- * \param[in]  const char   *param          URL请求参数
- * \param[out] char         *content        数据体
- * \param[out] uint         *content_len    数据体长度
- * \return     0-成功，其它失败
+ *\brief        CPU页面数据
+ *\param[in]    param           URL请求参数
+ *\param[in]    param           自定义参数
+ *\param[out]   content         数据体
+ *\param[out]   content_len     数据体长度
+ *\return       0               成功
  */
-int http_cpu_data(const char *param, char *content, uint *content_len)
+int http_cpu_data(const char *arg, void *param, char *content, uint *content_len)
 {
     int len;
     uint clk;
@@ -30,7 +31,7 @@ int http_cpu_data(const char *param, char *content, uint *content_len)
 
     ESP_LOGI(TAG, "format:%s", format);
 
-    if (param == NULL || 3 != sscanf(param, format, &clk, &int0, &int1))
+    if (NULL == arg || sscanf(arg, format, &clk, &int0, &int1) != 3)
     {
         *content_len = snprintf(content,
                                 *content_len,

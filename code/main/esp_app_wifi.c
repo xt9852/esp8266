@@ -17,16 +17,15 @@
 
 static EventGroupHandle_t       g_wifi_event_group;
 
-
 /**
- * \brief      事件回调函数
- * \param[in]  void* arg                    JSON字符串
- * \param[in]  esp_event_base_t event_base  事件类型
- * \param[in]  int32_t event_id             事件ID
- * \param[in]  void* event_data             事件数据
- * \return     无
+ *\brief        网络事件回调函数
+ *\param[in]    param           自定义数据
+ *\param[in]    event_base      事件类型
+ *\param[in]    event_id        事件ID
+ *\param[in]    event_data      事件数据
+ *\return                       无
  */
-static void wifi_event_callback(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+static void wifi_event_callback(void* param, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     switch (event_id)
     {
@@ -75,9 +74,9 @@ static void wifi_event_callback(void* arg, esp_event_base_t event_base, int32_t 
 }
 
 /**
- * \brief      初始化WIFI
- * \param[in]  p_config_wifi    wifi    配置数据
- * \return     0-成功，其它失败
+ *\brief        初始化WIFI
+ *\param[in]    wifi        配置数据
+ *\return       0           成功
  */
 int wifi_init(p_config_wifi wifi)
 {

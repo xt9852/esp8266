@@ -13,11 +13,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <Windows.h>
-#include "cJSON.h"
-#include "md5.h"
+#include "mbedtls\md5.h"
 #include "miniz.h"
-#include "sha256.h"
+#include "crypto_hash_sha256.h"
 #include "xt_base64.h"
+
+void mbedtls_platform_zeroize(void *buf, size_t len)
+{
+    memset(buf, 0, len);
+}
+
+void sodium_memzero(void *const pnt, const size_t len)
+{
+    memset(pnt, 0, len);
+}
 
 /// 缓冲区大小
 #define BUFF_SIZE       16*1024*1024
@@ -106,16 +115,16 @@
                         "4/IZ+ScugbVmftrD8PDAyrXG4nJ3OtyDpx+DQdfth6Sm+aGcmxFCjuAe18On5drX4Oh0v2I6k8s9zLMKGK2alDtH2WclVNXrXqpkhaCqPVzts5Sc5/SrprmehbGLJ7P"\
                         "VyBdJWzrrWftgf/Or+S4p+QynMNT/5XQtlfWK3L4qg/BOtTTYySVpyGvOUcIUi0HiTzHkzLW5lRKeWihHTyJ2Fx1ipv2vys7L8pdv5Z3aW7ibFeXnHD7DY64SPNvq48"\
                         "pqC6y4KfuMVhhCL9xkBrKLJyWsEoH6YhpYVQZdXwpSz1Cfp+5dHwgVL9kktskC8SF1NYE3pYE3sMnwaJ+Qs5VXRu+DgI4uiwYqlbcHUjH2t0bMG1StA5njORPV+Xnae"\
-                        "AeKgX/sjBQgHmTAm4UcKALvrcwkIa1JkWhikyWgkNTvyFsoKF1NGPk/wDSSbdJ"
+                        "AeKgX/sjBQgHmTAm4UcKALvrcwkIa1JkWhikyWgkNTvyFsoKF1NGPk/wDSSbdJ "
 
 enum
 {
-    APP = 0,                                ///< 应用
-    OTA,                                    ///< 生成OTA数据
-    CSV,                                    ///< 生成分区表数据
-    BIN,                                    ///< 生成BIN数据
-    ROM,                                    ///< 烧录固件
-    RAM,                                    ///< 向内存写入数据
+    APP = 0,                            ///< 应用
+    OTA,                                ///< 生成OTA数据
+    CSV,                                ///< 生成分区表数据
+    BIN,                                ///< 生成BIN数据
+    ROM,                                ///< 烧录固件
+    RAM,                                ///< 向内存写入数据
 };
 
 typedef struct _arg                     /// 程序输入参数
@@ -421,6 +430,26 @@ int com_reboot_to_loader(unsigned int com)
     return 0;
 }
 
+#define MZ_MIN(a,b)             (((a)<(b))?(a):(b))
+#define MZ_FINISH               4
+#define MZ_DEFAULT_WINDOW_BITS  15
+
+static const mz_uint s_tdefl_num_probes[11] = { 0, 1, 6, 32,  16, 32, 128, 256,  512, 768, 1500 };
+
+mz_uint tdefl_create_comp_flags_from_zip_params(int level, int window_bits, int strategy)
+{
+  mz_uint comp_flags = s_tdefl_num_probes[(level >= 0) ? MZ_MIN(10, level) : 6] | ((level <= 3) ? TDEFL_GREEDY_PARSING_FLAG : 0);
+  if (window_bits > 0) comp_flags |= TDEFL_WRITE_ZLIB_HEADER;
+
+  if (!level) comp_flags |= TDEFL_FORCE_ALL_RAW_BLOCKS;
+  else if (strategy == MZ_FILTERED) comp_flags |= TDEFL_FILTER_MATCHES;
+  else if (strategy == MZ_HUFFMAN_ONLY) comp_flags &= ~TDEFL_MAX_PROBES_MASK;
+  else if (strategy == MZ_FIXED) comp_flags |= TDEFL_FORCE_ALL_STATIC_BLOCKS;
+  else if (strategy == MZ_RLE) comp_flags |= TDEFL_RLE_MATCHES;
+
+  return comp_flags;
+}
+
 /**
  *\brief                    压缩数据
  *\param[in]    in          输入数据
@@ -431,9 +460,15 @@ int com_reboot_to_loader(unsigned int com)
  */
 int com_compress(const char *in, unsigned int in_len, unsigned char *out, unsigned int *out_len)
 {
-    if (mz_compress2(out, out_len, in, in_len, 9) != MZ_OK)
+    tdefl_compressor comp;
+    memset(&comp, 0, sizeof(comp));
+
+    mz_uint flags = TDEFL_COMPUTE_ADLER32 | tdefl_create_comp_flags_from_zip_params(9, MZ_DEFAULT_WINDOW_BITS, MZ_DEFAULT_STRATEGY);
+    tdefl_init(&comp, NULL, NULL, flags);
+
+    if (TDEFL_STATUS_DONE != tdefl_compress(&comp, in, &in_len, out, out_len, MZ_FINISH))
     {
-        printf("mz_compress2 fail\n");
+        printf("tdefl_compress fail\n");
         return -1;
     }
 
@@ -728,6 +763,15 @@ int com_upload_rom(HANDLE handle, unsigned char *buf, unsigned int buf_size, uns
 
     if (com_compress(data, data_len, in, &in_len) != 0) return -1;
 
+    unsigned char md5[16];
+    mbedtls_md5_context ctx;
+    mbedtls_md5_init(&ctx);
+    mbedtls_md5_starts_ret(&ctx);
+    mbedtls_md5_update_ret(&ctx, data, data_len);
+    mbedtls_md5_finish_ret(&ctx, md5);
+
+    printf("---------------md5\n");
+
     unsigned int size = 0x4000;
     unsigned int num = (in_len + size - 1) / size;
 
@@ -774,12 +818,9 @@ int com_upload_rom(HANDLE handle, unsigned char *buf, unsigned int buf_size, uns
 
     if (com_send_recv(handle, buf, buf_size, "write rom md5") != 0) return -4;
 
-    unsigned char md5_data[16];
-    md5(data, data_len, md5_data);
-
     p_slip_rsp rsp = (p_slip_rsp)(buf + 1);
 
-    printf("md5 check %s\n", (memcmp(rsp->data, md5_data, sizeof(md5_data)) == 0) ? "ok" : "fail!!!");
+    printf("md5 check %s\n", (memcmp(rsp->data, md5, sizeof(md5)) == 0) ? "ok" : "fail!!!");
 
     if (!reboot) return 0;
 
@@ -848,7 +889,7 @@ int com_upload_ram(HANDLE handle, unsigned char *buf, unsigned int buf_size, uns
 
     if (com_send_recv(handle, buf, buf_size, "write ram end") != 0) return -7;
 
-    printf("recv OHAI\n");
+    printf("recv wait OHAI\n");
 
     return com_recv(g_com, buf, buf_size);
 }
@@ -866,7 +907,7 @@ int com_upload_stub(HANDLE handle, unsigned char *buf, unsigned int buf_size)
     unsigned char   *sub_data   = (unsigned char*)malloc(BUFF_SIZE);
     unsigned int    text_len    = BUFF_SIZE;
     unsigned int    data_len    = BUFF_SIZE;
-    int             ret;
+    int             ret         = 0;
 
     do
     {
@@ -902,7 +943,7 @@ int com_upload_stub(HANDLE handle, unsigned char *buf, unsigned int buf_size)
 
     free(sub_text);
     free(sub_data);
-    return 0;
+    return ret;
 }
 
 /**
@@ -910,21 +951,15 @@ int com_upload_stub(HANDLE handle, unsigned char *buf, unsigned int buf_size)
  */
 void printf_info()
 {
-    //printf("esp_app.exe ota -size=0x1000 -o=output.bin\n");
-    //printf("esp_app.exe csv -i=input.csv -o=output.bin\n");
-    //printf("esp_app.exe bin -i=input.elf -o=output.bin -model=12F -version={1|3}\n");
-    //printf("esp_app.exe rom -i=input.bin -addr=0x10000 -com=1\n");
-    //printf("esp_app.exe ram -i=input.bin -com=1\n");
-
-    printf("esp_app.exe ota -o=3_otadata.bin -size=0x2000\n");
-    printf("esp_app.exe csv -o=2_partitions.bin -i=..\\conf\\partitions_two_ota.csv \n");
-    printf("esp_app.exe bin -o=1_bootloader.bin -i=..\\conf\\bootloader.elf -version=1\n");
-    printf("esp_app.exe bin -o=4_app.bin -i=..\\conf\\esp_app.elf -version=3\n");
-    printf("esp_app.exe rom -i=1_bootloader.bin -addr=0x0000 -com=5\n");
-    printf("esp_app.exe rom -i=2_partitions.bin -addr=0x8000 -com=5\n");
-    printf("esp_app.exe rom -i=3_otadata.bin -addr=0xd000 -com=5\n");
-    printf("esp_app.exe rom -i=4_app.bin -addr=0x10000 -com=5\n");
-    printf("esp_app.exe ram -i=4_app.bin -com=5\n");
+    printf("esp_tool.exe ota -o=3.otadata.bin -size=0x2000\n");
+    printf("esp_tool.exe csv -o=2.partitions.bin -i=..\\tmp\\partitions_two_ota.csv\n");
+    printf("esp_tool.exe bin -o=1.bootloader.bin -i=..\\tmp\\bootloader.elf -version=1\n");
+    printf("esp_tool.exe bin -o=4.app.bin -i=..\\tmp\\esp_app.elf -version=3\n");
+    printf("esp_tool.exe rom -i=1.bootloader.bin -addr=0x0000 -com=5\n");
+    printf("esp_tool.exe rom -i=2.partitions.bin -addr=0x8000 -com=5\n");
+    printf("esp_tool.exe rom -i=3.otadata.bin -addr=0xd000 -com=5\n");
+    printf("esp_tool.exe rom -i=4.app.bin -addr=0x10000 -com=5\n");
+    printf("esp_tool.exe ram -i=4.app.bin -com=5\n");
 }
 
 /**
@@ -1258,23 +1293,16 @@ int process_bin(const char *input, const char *output, unsigned int version)
 
     printf("checksum:\t0x%2x pad: %d\n", checksum, pad);
 
-    // SHA256校验全部数据,包括xor校验码
-    esp_sha256_t sha256;
-    esp_sha256_init(&sha256);
-    esp_sha256_update(&sha256, out, len);
-    esp_sha256_finish(&sha256);
-
-    for (int i = 0; i < 8; i++)
-    {
-        id = sha256.state[i];
-        sha256.state[i] = ((id & 0xFF000000) >> 24) | ((id & 0x00FF0000) >> 8) | ((id & 0x0000FF00)) << 8 | ((id & 0x000000FF) << 24);
-        printf("sha256:\t\t%08x\n", sha256.state[i]);
-    }
+    unsigned char sha256[32];
+    crypto_hash_sha256_state ctx;
+    crypto_hash_sha256_init(&ctx);
+    crypto_hash_sha256_update(&ctx, out, len);
+    crypto_hash_sha256_final(&ctx, sha256);
 
     if (3 == version)
     {
-        memcpy(out + len, &(sha256.state), sizeof(sha256.state));
-        len += sizeof(sha256.state);
+        memcpy(out + len, sha256, sizeof(sha256));
+        len += sizeof(sha256);
     }
 
     put_file_data(output, out, len);
@@ -1294,11 +1322,12 @@ int process_rom(const char *input, unsigned int addr, unsigned int com)
 {
     if (com_reboot_to_loader(com) != 0) return -1;  // 模块重启进入串口下载模式
 
-    unsigned char*  in      = (unsigned char*)malloc(BUFF_SIZE);
     unsigned char*  out     = (unsigned char*)malloc(BUFF_SIZE);
-    int             ret     = BUFF_SIZE;
+    unsigned char*  in      = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned int    in_len  = BUFF_SIZE;
+    int             ret     = 0;
 
-    if (get_file_data(input, in, &ret) != 0) return -2;
+    if (get_file_data(input, in, &in_len) != 0) return -2;
 
     do
     {
@@ -1320,7 +1349,7 @@ int process_rom(const char *input, unsigned int addr, unsigned int com)
             break;
         }
 
-        if (com_upload_rom(g_com, out, BUFF_SIZE, in, ret, addr, 1) != 0)
+        if (com_upload_rom(g_com, out, BUFF_SIZE, in, in_len, addr, 1) != 0)
         {
             ret = -6;
             break;
@@ -1344,12 +1373,13 @@ int process_ram(const char *input, unsigned int com)
 {
     if (com_reboot_to_loader(com) != 0) return -1; // 模块重启进入串口下载模式
 
-    unsigned char*  in      = (unsigned char*)malloc(BUFF_SIZE);
     unsigned char*  out     = (unsigned char*)malloc(BUFF_SIZE);
-    int             ret     = BUFF_SIZE;
+    unsigned char*  in      = (unsigned char*)malloc(BUFF_SIZE);
+    unsigned int    in_len  = BUFF_SIZE;
     p_bin           bin     = (p_bin)in;
+    int             ret     = 0;
 
-    if (get_file_data(input, in, &ret) != 0) return -2;
+    if (get_file_data(input, in, &in_len) != 0) return -2;
 
     do
     {
@@ -1365,8 +1395,7 @@ int process_ram(const char *input, unsigned int com)
             break;
         }
 
-        printf("---------%s\n bin magic:%x sec_num:%x flash_mod:%x flash_sf:%x entry:%x",
-                input, bin->magic, bin->sec_num, bin->flash_mod, bin->flash_sf, bin->entry);
+        printf("---------%s\n bin magic:%x sec_num:%x flash_mod:%x flash_sf:%x entry:%x", input, bin->magic, bin->sec_num, bin->flash_mod, bin->flash_sf, bin->entry);
 
         p_sec_head sec;
         unsigned int offset = sizeof(t_bin);

@@ -65,19 +65,19 @@
 
 int led = 1;
 
-#define GPIO_ESP8266_LED    2   // esp8266上的led灯
+#define GPIO_ESP8266_LED    2   ///< esp8266上的led灯
 
-// 74LS165并入串出
-// 使用GPIO16,5,4针脚对应右侧的上数1,2,3针脚
-#define GPIO_74LS165_LOAD   16  // 输出,加载数据,低电平有效
-#define GPIO_74LS165_NEXT   5   // 输出,移位数据,上升沿触发
-#define GPIO_74LS165_DATA   4   // 输入,读取数据.LOAD->DATA->CLK->DATA
+/// 74LS165并入串出
+/// 使用GPIO16,5,4针脚对应右侧的上数1,2,3针脚
+#define GPIO_74LS165_LOAD   16  ///< 输出,加载数据,低电平有效
+#define GPIO_74LS165_NEXT   5   ///< 输出,移位数据,上升沿触发
+#define GPIO_74LS165_DATA   4   ///< 输入,读取数据.LOAD->DATA->CLK->DATA
 
-// 74LS595串入并出
-// 使用GPIO14,12,13针脚对应右侧的上数8,9,10针脚
-#define GPIO_74LS595_DATA   13  // 输出,输出数据.DATA->SAVE->OUT
-#define GPIO_74LS595_SAVE   14  // 输出,移位数据,上升沿触发
-#define GPIO_74LS595_OUT    12  // 输出,保存数据,上升沿触发
+/// 74LS595串入并出
+/// 使用GPIO14,12,13针脚对应右侧的上数8,9,10针脚
+#define GPIO_74LS595_DATA   13  ///< 输出,输出数据.DATA->SAVE->OUT
+#define GPIO_74LS595_SAVE   14  ///< 输出,移位数据,上升沿触发
+#define GPIO_74LS595_OUT    12  ///< 输出,保存数据,上升沿触发
 
 uint times_intr = 0;
 uint times_last = 0;
@@ -88,9 +88,9 @@ uint g_led_type = 0;
 uint g_led_stat = 0;
 
 /**
- * \brief      任务回调函数
- * \param[in]  void *param  参数
- * \return     无
+ *\brief        任务回调函数
+ *\param[in]    param       参数
+ *\return                   无
 */
 static void task_gpio_led(void *param)
 {
@@ -109,9 +109,9 @@ static void task_gpio_led(void *param)
 
 
 /**
- * \brief      任务回调函数
- * \param[in]  void *param  参数
- * \return     无
+ *\brief        任务回调函数
+ *\param[in]    param       参数
+ *\return                   无
 
 static void gpio_task(void *param)
 {
@@ -139,9 +139,9 @@ static void gpio_task(void *param)
 }*/
 
 /**
- * \brief      中断回调函数,不能使用ESP_LOGI
- * \param[in]  void *param  参数
- * \return     无
+ *\brief        中断回调函数,不能使用ESP_LOGI
+ *\param[in]    param       参数
+ *\return                   无
 */
 static void gpio_isr_hander(void *param)
 {
@@ -152,29 +152,28 @@ static void gpio_isr_hander(void *param)
 }
 
 /**
- * \brief      初始化NodeMCU板载中断
- * \param[in]  int id           gpio ID
- * \param[in]  int intr_type    中断触发方式
- * \param[in]  int up           上拉
- * \param[in]  int down         下拉
- * \return     无
+ *\brief        初始化NodeMCU板载中断
+ *\param[in]    id              gpio ID
+ *\param[in]    intr_type       中断触发方式:
+ *                              GPIO_INTR_DISABLE    不中断
+ *                              GPIO_INTR_POSEDGE    上升沿触发
+ *                              GPIO_INTR_NEGEDGE    下降沿触发
+ *                              GPIO_INTR_ANYEDGE    双边沿触发
+ *                              GPIO_INTR_LOW_LEVEL  低电平触发
+ *                              GPIO_INTR_HIGH_LEVEL 高电平触发
+ *                              GPIO_INTR_MAX
+ *\param[in]    up              上拉
+ *\param[in]    down            下拉
+ *\return                       无
  */
 void gpio_intr_init(int id, int intr_type, int up, int down)
 {
-    // GPIO_INTR_DISABLE    不中断
-    // GPIO_INTR_POSEDGE    上升沿触发
-    // GPIO_INTR_NEGEDGE    下降沿触发
-    // GPIO_INTR_ANYEDGE    双边沿触发
-    // GPIO_INTR_LOW_LEVEL  低电平触发
-    // GPIO_INTR_HIGH_LEVEL 高电平触发
-    // GPIO_INTR_MAX
-
     gpio_config_t cfg = { 0 };
-    cfg.mode = GPIO_MODE_INPUT;         // 模式:GPIO_MODE_INPUT,GPIO_MODE_OUTPUT
-    cfg.intr_type = intr_type;          // 中断:
-    cfg.pull_up_en = up;                // 上拉
-    cfg.pull_down_en = down;            // 下拉
-    cfg.pin_bit_mask = (1ULL << id);    // gpio ID
+    cfg.mode = GPIO_MODE_INPUT;         ///< 模式:GPIO_MODE_INPUT,GPIO_MODE_OUTPUT
+    cfg.intr_type = intr_type;          ///< 中断
+    cfg.pull_up_en = up;                ///< 上拉
+    cfg.pull_down_en = down;            ///< 下拉
+    cfg.pin_bit_mask = (1ULL << id);    ///< gpio ID
     gpio_config(&cfg);
 
     gpio_install_isr_service(0);
@@ -182,10 +181,10 @@ void gpio_intr_init(int id, int intr_type, int up, int down)
 }
 
 /**
- * \brief      初始化GPIO
- * \param[in]  int id       gpio ID
- * \param[in]  int mode     gpio模式
- * \return     无
+ *\brief        初始化GPIO
+ *\param[in]    id              gpio ID
+ *\param[in]    mode            gpio模式
+ *\return                       无
  */
 void gpio_init(int id, int mode)
 {
@@ -199,11 +198,11 @@ void gpio_init(int id, int mode)
 }
 
 /**
- * \brief      初始化NodeMCU板载led灯
- * \param[in]  uint led 是否点亮led,0-关,1-亮,2-闪
- * \return     无
+ *\brief        初始化NodeMCU板载led灯
+ *\param[in]    led         是否点亮led,0-关,1-亮,2-闪
+ *\return                   无
  */
-void gpio_led_init(uint led)
+void gpio_led_init(unsigned int led)
 {
     gpio_init(GPIO_ESP8266_LED, GPIO_MODE_OUTPUT);
 
@@ -213,11 +212,11 @@ void gpio_led_init(uint led)
 }
 
 /**
- * \brief      led灯
- * \param[in]  uint led 是否点亮led,0-关,1-亮,2-闪
- * \return     无
+ *\brief        led灯
+ *\param[in]    led         是否点亮led,0-关,1-亮,2-闪
+ *\return       无
  */
-void gpio_led(uint led)
+void gpio_led(unsigned int led)
 {
     g_led_type = led;
 
@@ -227,8 +226,8 @@ void gpio_led(uint led)
 }
 
 /**
- * \brief      初始化74LS595使用的GPIO
- * \return     无
+ *\brief        初始化74LS595使用的GPIO
+ *\return       无
  */
 void gpio_74ls595_init()
 {
@@ -254,11 +253,11 @@ void gpio_74ls595_init()
 }
 
 /**
- * \brief      向74LS595串行输入数据
- * \param[in]  uint data 布尔值
- * \return     无
+ *\brief        向74LS595串行输入数据
+ *\param[in]    data        布尔值
+ *\return                   无
  */
-void gpio_74ls595_save(uint data)
+void gpio_74ls595_save(bool data)
 {
     gpio_set_level(GPIO_74LS595_DATA,  data);
 
@@ -270,9 +269,9 @@ void gpio_74ls595_save(uint data)
 }
 
 /**
- * \brief      从74LS595并行输出数据
- * \param[in]  无
- * \return     无
+ *\brief        从74LS595并行输出数据
+ *\param[in]    无
+ *\return       无
  */
 void gpio_74ls595_output()
 {
@@ -284,8 +283,8 @@ void gpio_74ls595_output()
 }
 
 /**
- * \brief      初始化74LS165使用的GPIO
- * \return     无
+ *\brief        初始化74LS165使用的GPIO
+ *\return       无
  */
 void gpio_74ls165_init()
 {
@@ -300,8 +299,8 @@ void gpio_74ls165_init()
 }
 
 /**
- * \brief      向74LS165存入并行数据
- * \return     无
+ *\brief        向74LS165存入并行数据
+ *\return       无
  */
 void gpio_74ls165_load_data()
 {
@@ -313,18 +312,18 @@ void gpio_74ls165_load_data()
 }
 
 /**
- * \brief      从74LS165串行读取数据
- * \param[in]  int count   组装数据的个数
- * \return     数据
+ *\brief        从74LS165串行读取数据
+ *\param[in]    count       组装数据的个数
+ *\return                   数据
  */
-uint gpio_74ls165_get_data(uint count)
+unsigned int gpio_74ls165_get_data(unsigned int count)
 {
     ESP_LOGI(TAG, "--%s count:%d", __FUNCTION__, count);
 
-    uint i;
-    uint bit;
+    unsigned int i;
+    unsigned int bit;
 
-data = 0;
+    data = 0;
 
     for (i = 0; i < count; i++)
     {
@@ -336,8 +335,8 @@ data = 0;
         vTaskDelay(5 / portTICK_PERIOD_MS);
         gpio_set_level(GPIO_74LS165_NEXT, 0);
 
-        //vTaskDelay(pdMS_TO_TICKS(20));
-        vTaskDelay(20 / portTICK_PERIOD_MS);
+        
+        vTaskDelay(20 / portTICK_PERIOD_MS);        // vTaskDelay(pdMS_TO_TICKS(20));
 
         ESP_LOGI(TAG, "--%s bit:%d", __FUNCTION__, bit);
     }

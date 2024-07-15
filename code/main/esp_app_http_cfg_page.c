@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "esp_app_http_cfg_page.h"
 
+/// 配置HTML
 #define HTTP_CONFIG_HTML_BEG "\
 <form action='/cfg-wifi'>\
   <input name='" CONFIG_WIFI_SSID "' value='%s' maxlength='32'/><br>\
@@ -41,14 +42,16 @@
 </form>"
 
 /**
- * \brief      配置页面
- * \param[in]  p_config config      配置数据
- * \param[out] char    *content     数据体
- * \param[out] uint    *content_len 数据体长度
- * \return     0-成功，其它失败
+ *\brief        配置页面,模板HTTP_PATH_PROC
+ *\param[in]    arg             URL请求参数
+ *\param[in]    param           配置数据
+ *\param[out]   content         数据体
+ *\param[out]   content_len     输入缓冲区大小,输出数据体长度
+ *\return       0               成功
  */
-int http_cfg_page(p_config config, char *content, uint *content_len)
+int http_cfg_page(const char *arg, void *param, char *content, unsigned int *content_len)
 {
+    p_config config = (p_config)param;
     p_config_wifi  wifi  = &(config->wifi);
     p_config_mqtt  mqtt  = &(config->mqtt);
     p_config_http  http  = &(config->http);

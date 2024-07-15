@@ -48,86 +48,83 @@
 
 typedef struct _config_wifi
 {
-    uint type;                      // WIFI类型:0-AP,1-STATION
+    uint type;                      ///< WIFI类型:0-AP,1-STATION
     char ssid[32];
     char password[32];
 
-} config_wifi_t, *p_config_wifi;
+} t_config_wifi, *p_config_wifi;
 
 typedef struct _config_mqtt
 {
-    char broker[32];                // broker地址,mqtt://broker.emqx.io
-    char username[32];              // 用户名
-    char password[32];              // 密码
-    char clientid[64];              // 同一个用户名下可以有多个不同的client
-    uint topic_count;               // 订阅主题数量
-    char topic[MQTT_TOPIC_MAX][64]; // 主题
-    void *queue[MQTT_TOPIC_MAX];    // 每个主题对应一个消息队列
+    char broker[32];                ///< broker地址,mqtt://broker.emqx.io
+    char username[32];              ///< 用户名
+    char password[32];              ///< 密码
+    char clientid[64];              ///< 同一个用户名下可以有多个不同的client
+    uint topic_count;               ///< 订阅主题数量
+    char topic[MQTT_TOPIC_MAX][64]; ///< 主题
+    void *queue[MQTT_TOPIC_MAX];    ///< 每个主题对应一个消息队列
 
-} config_mqtt_t, *p_config_mqtt;
+} t_config_mqtt, *p_config_mqtt;
 
 typedef struct _config_http
 {
-    uint port;                      // 端口
+    uint port;                      ///< 端口
 
-} config_http_t, *p_config_http;
+} t_config_http, *p_config_http;
 
 typedef struct _config_light
 {
-    uint on;                        // 0-关,1-亮,2-闪
+    uint on;                        ///< 0-关,1-亮,2-闪
 
-} config_light_t, *p_config_light;
+} t_config_light, *p_config_light;
 
 typedef struct _config
 {
-    config_wifi_t   wifi;
-    config_http_t   http;
-    config_mqtt_t   mqtt;
-    config_light_t  light;
+    t_config_wifi   wifi;
+    t_config_http   http;
+    t_config_mqtt   mqtt;
+    t_config_light  light;
 
-} config_t, *p_config;
+} t_config, *p_config;
 
 typedef struct _msg_head
 {
     uint            len;
     char           *data;
 
-} msg_head_t, *p_msg_head;
-
+} t_msg_head, *p_msg_head;
 
 /**
- * \brief      初始化配置
- * \param[out] p_config     config      配置数据
- * \param[in]  char        *buff        缓存
- * \param[in]  uint         size        缓存大小
- * \return     int 0-成功，其它失败
+ *\brief        初始化配置
+ *\param[out]   config      配置数据
+ *\return       0           成功
  */
-int config_init(p_config config, char *buff, uint size);
+int config_init(p_config config);
 
 /**
- * \brief      生成JOSN字符串，写入配置文件
- * \param[in]  p_config_wifi wifi
- * \return     int 0-成功，其它失败
+ *\brief        生成wifi数据的JSON字符串,写入配置文件
+ *\param[in]    wifi
+ *\return       0           成功
  */
 int config_put_wifi(p_config_wifi wifi);
 
 /**
- * \brief      生成JOSN字符串，写入配置文件
- * \param[in]  p_config_http http
- * \return     int 0-成功，其它失败
+ *\brief        生成http数据的JSON字符串,写入配置文件
+ *\param[in]    http
+ *\return       0           成功
  */
 int config_put_http(p_config_http http);
 
 /**
- * \brief      生成JOSN字符串，写入配置文件
- * \param[in]  p_config_mqtt mqtt
- * \return     int 0-成功，其它失败
+ *\brief        生成mqtt数据的JSON字符串,写入配置文件
+ *\param[in]    mqtt
+ *\return       0           成功
  */
 int config_put_mqtt(p_config_mqtt mqtt);
 
 /**
- * \brief      生成JOSN字符串，写入配置文件
- * \param[in]  p_config_light light
- * \return     int 0-成功，其它失败
+ *\brief        生成light数据的JSON字符串,写入配置文件
+ *\param[in]    light
+ *\return       0           成功
  */
 int config_put_light(p_config_light light);

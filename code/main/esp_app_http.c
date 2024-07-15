@@ -22,21 +22,20 @@
 #define HTTP_HEAD_404   "HTTP/1.1 404 Not Found\nContent-Type: text/html\nContent-Length: "
 #define HTTP_FILE_404   "404"
 
-static char          *g_buff;
-static uint           g_size;
-static p_config       g_config;
-static p_config_wifi  g_wifi;
-static p_config_mqtt  g_mqtt;
-static p_config_http  g_http;
-static p_config_light g_light;
+extern const unsigned int   g_buf_size;     ///< 缓存大小
 
+extern char                 g_buf[];        ///< 缓存,esp8266的栈比较小,所以使用堆区内存
+
+static p_path_proc          g_data;         ///< 路径与函数对应数据
+
+static unsigned int         g_data_count;   ///< 数量
 
 /**
- * \brief      创建监听socket
- * \param[in]  uint port   端口
- * \return     0-成功，其它失败
+ *\brief        创建监听socket
+ *\param[in]    port        端口号
+ *\return       0           成功
  */
-int http_create_listen_socket(uint port)
+int http_create_listen_socket(unsigned short port)
 {
     int addr_family;
     int ip_protocol;
@@ -95,144 +94,106 @@ int http_create_listen_socket(uint port)
 }
 
 /**
- * \brief      得到URI中的参数,/cpu-data?clk=1 HTTP/1.1
- * \param[in]  char *uri    URI地址
-  * \return    char* URI中参数指针
- */
-char* http_get_arg(char *uri)
-{
-    char *ch = strchr(uri, ' ');
-
-    if (NULL == ch)
-    {
-        ESP_LOGI(TAG, "request uri:%s error", uri);
-        return NULL;
-    }
-
-    *ch = '\0';
-
-    ch = strchr(uri, '?');
-
-    if (NULL != ch)
-    {
-        *ch++ = '\0';
-        return ch;
-    }
-
-    return NULL;
-}
-
-/**
- * \brief      处理客户端的请求
- * \param[in]  int client_sock   客户端socket
- * \return     0-成功，其它失败
+ *\brief        处理客户端的请求
+ *\param[in]    client_sock     客户端socket
+ *\return       0               成功
  */
 int http_process_client_request(int client_sock)
 {
-    int data_len = recv(client_sock, g_buff, g_size, 0);
+    int data_len = recv(client_sock, g_buf, g_buf_size, 0);
 
     if (data_len < 0)
     {
         ESP_LOGE(TAG, "Recv errno:%d", errno);
         return -1;
     }
-    else if (data_len == 0)
+
+    if (data_len == 0)
     {
         ESP_LOGI(TAG, "Connection closed");
         return -2;
     }
-    else
+
+    g_buf[data_len] = 0;
+
+    ESP_LOGI(TAG, "Socket %d recv len:%d", client_sock, data_len);
+
+    if (0 != strncmp(g_buf, "GET ", 4))
     {
-        ESP_LOGI(TAG, "Socket %d recv len:%d", client_sock, data_len);
+        ESP_LOGI(TAG, "Request is not GET");
+        return -3;
+    }
 
-        g_buff[data_len] = 0;
+    int          i;
+    int          ret         = 404;
+    char        *uri         = &g_buf[4];
+    char        *end         = strstr(uri, " ");
+    char        *mark        = strstr(uri, "?");
+    char        *content     = g_buf;
+    unsigned int content_len = g_buf_size;
 
-        if (0 != strncmp(g_buff, "GET ", 4))
-        {
-            ESP_LOGI(TAG, "Request is not GET");
-            return 1;
-        }
+    if (NULL != end)
+    {
+        *end = '\0';
+    }
 
-        int ret = 404;
-        char *uri = &g_buff[4];
-        char *arg = http_get_arg(uri);
-        char *content = g_buff;
-        uint content_len = g_size;
+    if (NULL != mark)
+    {
+        *mark++ = '\0';
+        ESP_LOGI(TAG, mark);
+    }
 
-        if (0 == strcmp(uri, "/"))
-        {
-            ret = http_cpu_page(content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/cfg.html"))
-        {
-            ret = http_cfg_page(g_config, content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/cfg-wifi"))
-        {
-            ret = http_cfg_wifi(arg, g_wifi, content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/cfg-mqtt"))
-        {
-            ret = http_cfg_mqtt(arg, g_mqtt, content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/cfg-http"))
-        {
-            ret = http_cfg_http(arg, g_http, content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/cfg-light"))
-        {
-            ret = http_cfg_light(arg, g_light, content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/reboot"))
-        {
-            ret = http_reboot(content, &content_len);
-        }
-        else if (0 == strcmp(uri, "/cpu-data"))
-        {
-            ret = http_cpu_data(arg, content, &content_len);
-        }
+    ESP_LOGI(TAG, uri);
 
-        char *head;
-        uint head_len;
+    for (i = 0; i < g_data_count && 0 != strcmp(uri, g_data[i].path); i++);
 
-        if (ret == 200)
+    ret = (i >= g_data_count) ? 404 : g_data[i].proc(mark, g_data[i].param, content, &content_len);
+
+    char *head;
+    uint head_len;
+
+    switch (ret)
+    {
+        case 200:
         {
             head = HTTP_HEAD_200;
             head_len = sizeof(HTTP_HEAD_200) - 1;
+            break;
         }
-        else if (ret == 400)
+        case 400:
         {
             head = HTTP_HEAD_400;
             head_len = sizeof(HTTP_HEAD_400) - 1;
+            break;
         }
-        else
+        default:
         {
             head = HTTP_HEAD_404;
             content = HTTP_FILE_404;
             head_len = sizeof(HTTP_HEAD_404) - 1;
             content_len = sizeof(HTTP_FILE_404) - 1;
+            break;
         }
-
-        char content_len_str[8];
-        sprintf(content_len_str, "%d\n\n", content_len);                        // 内容长度,加2个\n
-
-        ret = send(client_sock, head, head_len, 0);                             // 发送头部
-        ESP_LOGI(TAG, "Send head len:%d", ret);
-
-        ret = send(client_sock, content_len_str, strlen(content_len_str), 0);   // 发送内容长度
-        ESP_LOGI(TAG, "Send Content-Length len:%d", ret - 2);
-
-        ret = send(client_sock, content, content_len, 0);                       // 发送内容
-        ESP_LOGI(TAG, "Send body len:%d", ret);
     }
 
+    char content_len_str[8];
+    sprintf(content_len_str, "%d\n\n", content_len);                        // 内容长度,加2个\n
+
+    ret = send(client_sock, head, head_len, 0);                             // 发送头部
+    ESP_LOGI(TAG, "Send head len:%d", ret);
+
+    ret = send(client_sock, content_len_str, strlen(content_len_str), 0);   // 发送内容长度
+    ESP_LOGI(TAG, "Send Content-Length len:%d", ret - 2);
+
+    ret = send(client_sock, content, content_len, 0);                       // 发送内容
+    ESP_LOGI(TAG, "Send body len:%d", ret);
     return 0;
 }
 
 /**
- * \brief      任务回调函数
- * \param[in]  void* param  参数
- * \return     无
+ *\brief        客户端任务回调函数
+ *\param[in]    param           参数
+ *\return                       无
  */
 static void http_client_task(void *param)
 {
@@ -248,9 +209,9 @@ static void http_client_task(void *param)
 }
 
 /**
- * \brief      处理客户端的连接
- * \param[in]  int listen_sock   监听socket
- * \return     0-成功，其它失败
+ *\brief        处理客户端的连接
+ *\param[in]    listen_sock     监听socket
+ *\return       0               成功
  */
 int http_process_client_connect(int listen_sock)
 {
@@ -290,17 +251,17 @@ int http_process_client_connect(int listen_sock)
 }
 
 /**
- * \brief      任务回调函数
- * \param[in]  void* param  参数
- * \return     无
+ *\brief        HTTP主任务回调函数
+ *\param[in]    param           参数
+ *\return                       无
  */
 static void http_server_task(void *param)
 {
-    p_config_http http = (p_config_http)param;
+    unsigned short port = (unsigned int)param;
 
     while (1)
     {
-        int listen_sock = http_create_listen_socket(http->port);
+        int listen_sock = http_create_listen_socket(port);
 
         while (listen_sock > 0)
         {
@@ -315,22 +276,16 @@ static void http_server_task(void *param)
 }
 
 /**
- * \brief      初始化http
- * \param[in]  p_config       config
- * \param[in]  char          *buff      缓存
- * \param[in]  uint           size      缓存大小
- * \return     0-成功，其它失败
+ *\brief        初始化http
+ *\param[in]    port            商品呺
+ *\param[in]    data            路径与函数对应数据
+ *\param[in]    data_count      路径与函数对应数据数量
+ *\return       0               成功
  */
-int http_init(p_config config, char *buff, uint size)
+int http_init(unsigned short port, p_path_proc data, unsigned int data_count)
 {
-    g_buff   = buff;
-    g_size   = size;
-    g_config = config;
-    g_wifi   = &(config->wifi);
-    g_mqtt   = &(config->mqtt);
-    g_http   = &(config->http);
-    g_light  = &(config->light);
-
-    xTaskCreate(http_server_task, "http_server", 4096, g_http, 5, NULL);
+    g_data = data;
+    g_data_count = data_count;
+    xTaskCreate(http_server_task, "http_server", 4096, (void*)(unsigned int)port, 5, NULL);
     return 0;
 }

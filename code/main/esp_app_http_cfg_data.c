@@ -11,10 +11,10 @@
 #define HTTP_CONTENT_200    "OK"
 
 /**
- * \brief      解码URL
- * \param[in]  const char *in   输入
- * \param[out] char       *out  输出
- * \return     无
+ *\brief        解码URL
+ *\param[in]    in              输入
+ *\param[out]   out             输出
+ *\return                       无
  */
 void http_cfg_url(const char *in, char *out)
 {
@@ -72,11 +72,11 @@ void http_cfg_url(const char *in, char *out)
 }
 
 /**
- * \brief      任务回调函数
- * \param[in]  void* pvParameters  参数
- * \return     无
+ *\brief        重启任务回调函数,为了先发送http应答,客户端收到应答后然后再重启
+ *\param[in]    param           参数
+ *\return       无
  */
-static void restart_task(void *pvParameters)
+static void restart_task(void *param)
 {
     ESP_LOGI(TAG, "------------------restart 2000ms");
     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -85,12 +85,14 @@ static void restart_task(void *pvParameters)
 }
 
 /**
- * \brief      重启
- * \param[out] char          *content       数据体
- * \param[out] uint          *content_len   数据体长度
- * \return     200-成功，其它失败
+ *\brief        重启,模板HTTP_PATH_PROC
+ *\param[in]    arg             URL请求参数
+ *\param[in]    param           自定义参数
+ *\param[out]   content         数据体
+ *\param[out]   content_len     输入缓冲区大小,输出数据体长度
+ *\return       0               成功
  */
-int http_reboot(char *content, uint *content_len)
+int http_reboot(const char *arg, void *param, char *content, unsigned int *content_len)
 {
     xTaskCreate(restart_task, "restart_task", 4096, NULL, 5, NULL);
     strncpy(content, HTTP_CONTENT_200, *content_len);
@@ -99,28 +101,25 @@ int http_reboot(char *content, uint *content_len)
 }
 
 /**
- * \brief      配置wifi
- * \param[in]  const char   *param          URL请求参数
- * \param[in]  p_config_wifi wifi           配置数据
- * \param[out] char         *content        数据体
- * \param[out] uint         *content_len    数据体长度
- * \return     200-成功，其它失败
+ *\brief        配置wifi,模板HTTP_PATH_PROC
+ *\param[in]    arg             URL请求参数
+ *\param[in]    param           wifi数据
+ *\param[out]   content         数据体
+ *\param[out]   content_len     数据体长度
+ *\return       200             成功
  */
-int http_cfg_wifi(const char *param, p_config_wifi wifi, char *content, uint *content_len)
+int http_cfg_wifi(const char *arg, void *param, char *content, unsigned int *content_len)
 {
+    p_config_wifi wifi = (p_config_wifi)param;
     uint type;
     char ssid[32];
     char password[32];
     char format[64];
     char args[1024];
 
-    http_cfg_url(param, args);
-
-    ESP_LOGI(TAG, args);
+    http_cfg_url(arg, args);
 
     snprintf(format, sizeof(format) - 1, "%s=%%%d[^&]&%s=%%%d[^&]&%s=%%d", CONFIG_WIFI_SSID, sizeof(ssid) - 1, CONFIG_WIFI_PASSWORD, sizeof(password) - 1, CONFIG_WIFI_TYPE);
-
-    ESP_LOGI(TAG, format);
 
     if (3 == sscanf(args, format, ssid, password, &type))
     {
@@ -144,15 +143,48 @@ int http_cfg_wifi(const char *param, p_config_wifi wifi, char *content, uint *co
 }
 
 /**
- * \brief      配置mqtt
- * \param[in]  const char   *param          URL请求参数
- * \param[in]  p_config_mqtt mqtt           配置数据
- * \param[out] char         *content        数据体
- * \param[out] uint         *content_len    数据体长度
- * \return     0-成功，其它失败
+ *\brief        配置http,模板HTTP_PATH_PROC
+ *\param[in]    arg             URL请求参数
+ *\param[in]    param           http数据
+ *\param[out]   content         数据体
+ *\param[out]   content_len     数据体长度
+ *\return       200             成功
  */
-int http_cfg_mqtt(const char *param, p_config_mqtt mqtt, char *content, uint *content_len)
+int http_cfg_http(const char *arg, void *param, char *content, unsigned int *content_len)
 {
+    p_config_http http = (p_config_http)param;
+    char format[64];
+    char args[1024];
+
+    http_cfg_url(arg, args);
+
+    snprintf(format, sizeof(format) - 1, "%s=%%d", CONFIG_HTTP_PORT);
+
+    if (1 == sscanf(args, format, &(http->port))) // 函数将返回成功赋值的字段个数
+    {
+        config_put_http(http);
+
+        strncpy(content, HTTP_CONTENT_200, *content_len);
+        *content_len = sizeof(HTTP_CONTENT_200) - 1;
+        return 200;
+    }
+
+    *content_len = snprintf(content, *content_len, "arg %s error", CONFIG_HTTP_PORT);
+    ESP_LOGE(TAG, content);
+    return 400;
+}
+
+/**
+ *\brief        配置mqtt,模板HTTP_PATH_PROC
+ *\param[in]    arg             URL请求参数
+ *\param[in]    param            mqtt数据
+ *\param[out]   content         数据体
+ *\param[out]   content_len     数据体长度
+ *\return       200             成功
+ */
+int http_cfg_mqtt(const char *arg, void *param, char *content, unsigned int *content_len)
+{
+    p_config_mqtt mqtt = (p_config_mqtt)param;
     char broker[32];
     char username[32];
     char password[32];
@@ -161,9 +193,7 @@ int http_cfg_mqtt(const char *param, p_config_mqtt mqtt, char *content, uint *co
     char format[128];
     char args[1024];
 
-    http_cfg_url(param, args);
-
-    ESP_LOGI(TAG, args);
+    http_cfg_url(arg, args);
 
     // username,password多取一个=,当为空串时,sscanf出错
     snprintf(format, sizeof(format) - 1, "%s=%%%d[^&]&%s%%%d[^&]&%s%%%d[^&]&%s=%%%d[^&]&", CONFIG_MQTT_BROKER, sizeof(broker) - 1,
@@ -196,6 +226,7 @@ int http_cfg_mqtt(const char *param, p_config_mqtt mqtt, char *content, uint *co
         strcpy(mqtt->username, &username[1]);
         strcpy(mqtt->password, &password[1]);
         strcpy(mqtt->clientid, clientid);
+        memcpy(mqtt->topic,    topic, sizeof(mqtt->topic));
 
         config_put_mqtt(mqtt);
 
@@ -210,54 +241,20 @@ int http_cfg_mqtt(const char *param, p_config_mqtt mqtt, char *content, uint *co
 }
 
 /**
- * \brief      配置http
- * \param[in]  const char   *param          URL请求参数
- * \param[in]  p_config_http http           配置数据
- * \param[out] char         *content        数据体
- * \param[out] uint         *content_len    数据体长度
- * \return     200-成功，其它失败
+ *\brief        配置light,模板HTTP_PATH_PROC
+ *\param[in]    arg             URL请求参数
+ *\param[in]    param           light数据
+ *\param[out]   content         数据体
+ *\param[out]   content_len     数据体长度
+ *\return       200             成功
  */
-int http_cfg_http(const char *param, p_config_http http, char *content, uint *content_len)
+int http_cfg_light(const char *arg, void *param, char *content, unsigned int *content_len)
 {
+    p_config_light light = (p_config_light)param;
     char format[64];
     char args[1024];
 
-    http_cfg_url(param, args);
-
-    ESP_LOGI(TAG, args);
-
-    snprintf(format, sizeof(format) - 1, "%s=%%d", CONFIG_HTTP_PORT);
-
-    if (1 == sscanf(args, format, &(http->port))) // 函数将返回成功赋值的字段个数
-    {
-        config_put_http(http);
-
-        strncpy(content, HTTP_CONTENT_200, *content_len);
-        *content_len = sizeof(HTTP_CONTENT_200) - 1;
-        return 200;
-    }
-
-    *content_len = snprintf(content, *content_len, "arg %s error", CONFIG_HTTP_PORT);
-    ESP_LOGE(TAG, content);
-    return 400;
-}
-
-/**
- * \brief      配置light
- * \param[in]  const char    *param         URL请求参数
- * \param[in]  p_config_light light         配置数据
- * \param[out] char          *content       数据体
- * \param[out] uint          *content_len   数据体长度
- * \return     200-成功，其它失败
- */
-int http_cfg_light(const char *param, p_config_light light, char *content, uint *content_len)
-{
-    char format[64];
-    char args[1024];
-
-    http_cfg_url(param, args);
-
-    ESP_LOGI(TAG, args);
+    http_cfg_url(arg, args);
 
     snprintf(format, sizeof(format) - 1, "%s=%%d", CONFIG_LIGHT_ON);
 

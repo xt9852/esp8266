@@ -9,10 +9,10 @@ static esp_mqtt_client_handle_t     g_mqtt;
 static p_config_mqtt                g_conf;
 
 /**
- * \brief      MQTT发布信息
- * \param[in]  const char *topic    主题
- * \param[in]  const char *msg      信息
- * \return     无
+ *\brief        MQTT发布信息
+ *\param[in]    topic       主题
+ *\param[in]    msg         信息
+ *\return                   无
  */
 int mqtt_publish(const char *topic, const char *msg)
 {
@@ -21,7 +21,15 @@ int mqtt_publish(const char *topic, const char *msg)
     return 0;
 }
 
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+/**
+ *\brief        MQTT事件回调
+ *\param[in]    param       自定义参数
+ *\param[in]    base        类型
+ *\param[in]    event_id    事件ID
+ *\param[in]    event_data  事件数据
+ *\return                   无
+ */
+static void mqtt_event_handler(void *param, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
 
@@ -49,7 +57,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             ESP_LOGI(TAG, "MQTT_EVENT_DATA TOPIC=%.*s", event->topic_len, event->topic);
             ESP_LOGI(TAG, "MQTT_EVENT_DATA DATA=%.*s", event->data_len, event->data);
 
-            msg_head_t msg;
+            t_msg_head msg;
             msg.len = event->data_len;
             msg.data = (char*)malloc(event->data_len + 1);
             msg.data[msg.len] = '\0';
@@ -87,9 +95,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 }
 
 /**
- * \brief      初始化MQTT
- * \param[in]  p_config_mqtt    mqtt        配置数据
- * \return     0-成功, 其它失败
+ *\brief        初始化MQTT
+ *\param[in]    mqtt        配置数据
+ *\return       0           成功
  */
 int mqtt_init(p_config_mqtt mqtt)
 {
@@ -97,7 +105,7 @@ int mqtt_init(p_config_mqtt mqtt)
 
     for (int i = 0; i < mqtt->topic_count; i++)
     {
-        mqtt->queue[i] = xQueueCreate(10, sizeof(msg_head_t));
+        mqtt->queue[i] = xQueueCreate(10, sizeof(t_msg_head));
     }
 
     esp_mqtt_client_config_t mqtt_cfg = {

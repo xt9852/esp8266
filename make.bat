@@ -1,5 +1,4 @@
 ::-----------------------------------------------------
-:: Copyright:   XT Tech. Co., Ltd.
 :: File:        make.bat
 :: Author:      张海涛
 :: Version:     2.0.0
@@ -9,27 +8,81 @@
 ::              参数配置sdkconfig.h
 ::-----------------------------------------------------
 
-:: 不显示命令字符串,设置屏幕大小,字体颜色
-@echo off && mode con cols=100 lines=1000 && color 0A
+:: 不显示命令字符串
+@echo off
 
-::切换到UTF-8代码页,在命令行标题栏上点击右键，选择"属性"->"字体"，将字体修改为True Type字体"Lucida Console"
-::chcp 65001
+:: UTF-8代码页,命令行标题栏右键,属性/字体,Lucida Console
+@chcp 65001
+
+:: 字体颜色
+@color 0A
+
+:: 设置缓冲区大小,设置窗口大小,命令行标题栏右键,属性/布局,窗口大小
+@mode con COLS=100 LINES=1000
 
 :: 延时变量扩展,如果不设置for的变量将不起作用
 setLocal EnableDelayedExpansion
 
-::-----------------------------------------------------
+::----------------------------------------------------------------------------------------------------------
 
 :: SDK目录
 set SDK=D:\4.backup\coding\ESP8266_RTOS_SDK-v3.4\components
 
-:: BOOTLOADER OR APP
+:: 交叉编译工具目录
+set TOOL=D:\4.backup\coding\xtensa-lx106-elf
+
+::----------------------------------------------------------------------------------------------------------
+
+:: BOOTLOADER | APP
 set TYPE=APP
 
 :: 源文件路径,可多个路径
-set SRC_APP=.\code\test
+set APP_SRC=.\code\main ^
+%SDK%\app_update ^
+%SDK%\bootloader_support\src ^
+%SDK%\log ^
+%SDK%\esp8266\driver ^
+%SDK%\esp8266\source ^
+%SDK%\esp_common\src ^
+%SDK%\esp_event ^
+%SDK%\freertos\freertos ^
+%SDK%\freertos\port\esp8266 ^
+%SDK%\heap\src ^
+%SDK%\http_parser\src ^
+%SDK%\lwip\apps ^
+%SDK%\lwip\lwip\src\api ^
+%SDK%\lwip\lwip\src\core ^
+%SDK%\lwip\lwip\src\netif ^
+%SDK%\lwip\lwip\src\apps\sntp ^
+%SDK%\lwip\lwip\src\apps\netbiosns ^
+%SDK%\lwip\port ^
+%SDK%\json\cJSON ^
+%SDK%\mqtt\esp-mqtt ^
+%SDK%\newlib\src ^
+%SDK%\nvs_flash\src ^
+%SDK%\spi_flash\src ^
+%SDK%\tcpip_adapter ^
+%SDK%\tcp_transport ^
+%SDK%\wpa_supplicant\src
 
-set SRC_BOOT=^
+:: lwip\apps\sntp\sntp.c=>sntp_.c
+:: wpa_supplicant\src\crypto\bignum.c=>bignum_.c
+
+:: 排除的文件,目录
+set APP_EXC=test\ ^
+fuzzing\ ^
+tests\ ^
+apps\http\ ^
+app_update\test\ ^
+tls\ ^
+test.c ^
+ethernetif.c ^
+esp_common.c ^
+esp_scan.c ^
+rrm.c ^
+bignum_.c
+
+set BOOT_SRC=^
 %SDK%\bootloader\subproject\main ^
 %SDK%\bootloader_support\src ^
 %SDK%\spi_flash\src ^
@@ -37,10 +90,7 @@ set SRC_BOOT=^
 %SDK%\esp8266\source ^
 %SDK%\log
 
-:: 排除的文件,目录
-set EXC_APP=
-
-set EXC_BOOT=partition.c ^
+set BOOT_EXC=partition.c ^
 test_log_set_tag.c ^
 backtrace.c ^
 chip_boot.c ^
@@ -59,25 +109,47 @@ startup.c ^
 system_api.c ^
 task_wdt.c
 
-:: 临时文件路径
+:: 临时目录
 set TMP=.\tmp
+
+:: 输出目录
+set OUT=.\out
 
 :: 编译参数
 set CF=-I.\conf
 
-:: 链接参数
-set LF_APP=-T.\code\test\esp8266.app.ld -o%TMP%\app.elf -Map=%TMP%\app.map -L%SDK%\esp8266\lib
+:: 链接参数 -lrtc -lclk -lpp -lsmartconfig -lssc -lespnow 
+set APP_LF=-L%SDK%\esp8266\lib -lgcc -lcore -lcore_dbg -lnet80211 -lphy -lpp -lpp_dbg -Tesp8266.rom.ld ^
+-L%TOOL%\xtensa-lx106-elf\lib -lc_nano -lm ^
+-T.\code\test\esp8266.app.ld -o%TMP%\app.elf -Map=%TMP%\app.map -L%SDK%\esp8266\lib
 
-set LF_BOOT=-L%SDK%\esp8266\lib -lcore -L%SDK%\bootloader\subproject\main -L%SDK%\esp8266\ld ^
--T esp8266.bootloader.ld -T esp8266.bootloader.rom.ld -T esp8266.rom.ld ^
--o .\tmp\bootloader.elf -Wl,-Map=.\tmp\bootloader.map
+set BOOT_LF=-L%SDK%\esp8266\lib -lcore ^
+-L%SDK%\esp8266\ld -Tesp8266.rom.ld ^
+-L%SDK%\bootloader\subproject\main -Tesp8266.bootloader.rom.ld -Tesp8266.bootloader.ld ^
+-o%TMP%\bootloader.elf -Map=%TMP%\bootloader.map
 
-::-----------------------------------------------------
+::----------------------------------------------------------------------------------------------------------
 ::执行命令
 
-if "%1" == "clean" (rd /q/s "%TMP%" 2>nul & echo rd /q/s "%TMP%" & exit /b 0) else if not exist "%TMP%" (mkdir "%TMP%")
+echo ARG=%*
 
-::-----------------------------------------------------
+if "%1" == "app" (
+    set TYPE=APP
+) else if "%1" == "bootloader" (
+    set TYPE=BOOTLOADER
+) else if "%1" == "clean" (
+    rd /q/s "%TMP%" 2>nul
+    exit /b
+) else (
+    echo "Don't have {app|bootloader|clean}"
+    pause
+    exit /b
+)
+
+if not exist "%TMP%" (mkdir "%TMP%")
+if not exist "%OUT%" (mkdir "%OUT%")
+
+::----------------------------------------------------------------------------------------------------------
 :: 设置编译参数
 
 :: 编译参数
@@ -123,130 +195,177 @@ if "%1" == "clean" (rd /q/s "%TMP%" 2>nul & echo rd /q/s "%TMP%" & exit /b 0) el
 :: -Wno-unused-private-field        不显示未使用的类私有成员警告
 :: -Wno-unused-label                不显示未使用的跳转标记警告
 :: -Wno-deprecated-declarations     不显示过时的不推荐使用的函数或者特性时
-
+:: -Wno-implicit-fallthrough        不显示switch的case里没有break
 :: -Wno-error=unused-function -Wno-error=unused-variable -Wno-error=unused-but-set-variable -Wno-error=deprecated-declarations
 :: -Wno-frame-address -Wno-old-style-declaration
 
-set CF=%CF% -std=gnu99 -Os -MMD -MP -mlongcalls ^
+set CF=%CF% -Os -MMD -MP -mlongcalls ^
 -fdata-sections -ffunction-sections -fstrict-volatile-bitfields ^
 -Wall -Werror=all -Wextra ^
--Wno-sign-compare -Wno-unused-parameter ^
--D_GNU_SOURCE -DGCC_NOT_5_2_0=1 ^
--DESP_PLATFORM -DICACHE_FLASH -DIDF_VER=\"v3.4-dirty\" ^
--DMBEDTLS_CONFIG_FILE='"mbedtls/esp_config.h"' -DCONFIG_SSL_USING_MBEDTLS
+-Wno-sign-compare -Wno-unused-parameter -Wno-implicit-fallthrough -Wno-cast-function-type -Wno-unused-variable ^
+-DGCC_NOT_5_2_0=1 -D_GNU_SOURCE ^
+-DESP_PLATFORM -DIDF_VER=\"v3.4-dirty\" ^
+-DPROJECT_VER=\"96823e3-dirty\" -DPROJECT_NAME=\"esp_app\" ^
+-DMBEDTLS_CONFIG_FILE=\"mbedtls/esp_config.h\" -DCONFIG_SSL_USING_MBEDTLS ^
+-DICACHE_FLASH ^
+-D__ets__ ^
+-DESP_SUPPLICANT ^
+-DIEEE8021X_EAPOL ^
+-DEAP_PEER_METHOD ^
+-DEAP_MSCHAPv2 ^
+-DEAP_TTLS ^
+-DEAP_TLS ^
+-DEAP_PEAP ^
+-DUSE_WPA2_TASK ^
+-DCONFIG_WPS2 ^
+-DCONFIG_WPS_PIN ^
+-DUSE_WPS_TASK ^
+-DESPRESSIF_USE ^
+-DESP8266_WORKAROUND ^
+-DCONFIG_ECC ^
+-DCONFIG_IEEE80211W ^
+-DCONFIG_WPA3_SAE ^
+-DCONFIG_DPP ^
+-DCONFIG_WNM
 
 :: BOOTLOADER OR APP
 if %TYPE% == BOOTLOADER (
     set CF=%CF% -DBOOTLOADER_BUILD=1
-    set LF=%LF_BOOT%
-    set SRC=%SRC_BOOT%
-    set EXC=%EXC_BOOT%
+    set LF=%BOOT_LF%
+    set SRC=%BOOT_SRC%
+    set EXC=%BOOT_EXC%
 ) else (
-    set CF=%CF% -DAPP_OFFSET=0x10000 -DAPP_SIZE=0xf0000
-    set LF=%LF_APP%
-    set SRC=%SRC_APP%
-    set EXC=%EXC_APP%
+    set CF=%CF%
+    set LF=%APP_LF%
+    set SRC=%APP_SRC%
+    set EXC=%APP_EXC%
 )
 
 :: 头文件路径
-set CF=%CF% ^
+set INCLUDE=^
 -I%SDK%\bootloader_support\include_priv ^
+-I%SDK%\esp8266\include\driver ^
+-I%SDK%\esp_event\private_include ^
+-I%SDK%\esp-tls ^
+-I%SDK%\esp_ringbuf\include\freertos ^
 -I%SDK%\freertos\port\esp8266\include ^
 -I%SDK%\freertos\port\esp8266\include\freertos ^
+-I%SDK%\freertos\include\freertos ^
 -I%SDK%\freertos\include\freertos\private ^
 -I%SDK%\heap\port\esp8266\include ^
--I%SDK%\mqtt\esp-mqtt\include ^
 -I%SDK%\json\cJSON ^
 -I%SDK%\lwip\include\apps ^
 -I%SDK%\lwip\include\apps\sntp ^
 -I%SDK%\lwip\lwip\src\include ^
 -I%SDK%\lwip\port\esp8266\include ^
--I%SDK%\newlib\platform_include
+-I%SDK%\mbedtls\mbedtls\include ^
+-I%SDK%\mbedtls\port\include ^
+-I%SDK%\mbedtls\port\include\esp8266 ^
+-I%SDK%\mqtt\esp-mqtt\include ^
+-I%SDK%\mqtt\esp-mqtt\lib\include ^
+-I%SDK%\newlib\platform_include ^
+-I%SDK%\tcp_transport\private_include ^
+-I%SDK%\wpa_supplicant\src ^
+-I%SDK%\wpa_supplicant\port\include ^
+-I%SDK%\wpa_supplicant\include\esp_supplicant
 
-:: SDK内所有组件路径
+:: 查找SDK内所有组件路径
 for /d %%D in (%SDK%\*) do (
    set INCLUDE=!INCLUDE! -I%%D\include
 )
 
-::-----------------------------------------------------
+::----------------------------------------------------------------------------------------------------------
 :: 设置连接参数
 :: EL                       小端架构
 :: gc-sections              去掉不用的section, 编译需加-fdata-sections,-ffunction-sections
 :: start-group,end-group    让包含在这两者间的静态库顺序可以随意
-:: -u                       取消符号定义
-::
+:: -u                       取消符号定义-D定义的宏
 :: -u call_user_start_cpu0 --start-group -lgcc -lstdc++ -lgcov --end-group
 
 set LF=-EL -nostdlib --gc-sections %LF%
 
-::-----------------------------------------------------
+::----------------------------------------------------------------------------------------------------------
 :: 编译工具
 
 set AR=xtensa-lx106-elf-ar.exe
 set CC=xtensa-lx106-elf-gcc.exe
 set XX=xtensa-lx106-elf-c++.exe
 set LD=xtensa-lx106-elf-ld.exe
-set TOOL=D:\4.backup\coding\xtensa-lx106-elf\bin
 
-::-----------------------------------------------------
+::----------------------------------------------------------------------------------------------------------
 :: 编译文件
 
-set PATH=%PATH%;%TOOL%
+set PATH=%PATH%;%TOOL%\bin
 
 set OBJ=
 
 :: 编译文件,多个源目录
+:: %%~f 文件全路径名
+:: %%~nx 文件名+文件扩展名
 for %%D in (%SRC%) do (
     for /f %%F in ('dir /s/b %%D') do (
         set PROC=0
-        if %%~xF == .c     (set PROC=1)
-        if %%~xF == .cpp   (set PROC=1)
 
-        :: 是否需要排除,RELATIVE相对路径
+        :: 比较扩展名
+        if "%%~xF" == ".c"   (set PROC=1)
+        if "%%~xF" == ".cpp" (set PROC=1)
+        if "%%~xF" == ".S"   (set PROC=1)
+
         if !PROC! == 1 (
             set FULLNAME=%%F
-            set RELATIVE=!FULLNAME:%%D\=!
-            for /f "delims=\" %%E in ('echo !RELATIVE!') do (set DIR=%%E)
-            echo %EXC% | findstr !DIR! > nul && (set PROC=0)
-            echo %EXC% | findstr %%~nxF > nul && (set PROC=0)
+
+            :: 相对路径名,%%~fD全路径名
+            set RELATIVE=!FULLNAME:%%~fD\=!
+
+            :: 去掉文件名,%%~nxF文件名
+            set MIDDLE=!RELATIVE:%%~nxF=!
+
+            for %%i in (%EXC%) do (
+                :: 排除文件
+                if %%i == %%~nxF (set PROC=0)
+
+                :: 排除目录
+                echo !MIDDLE! | findstr /b %%i > nul && (set PROC=0)
+            )
         )
 
         if !PROC! == 1 (
             set OBJ=!OBJ! %TMP%\%%~nF.o
-            if %%~xF == .c (
-                set EXE=%CC%  %CF% %INCLUDE% -D__ESP_FILE__='"%%~nF%%~xF"' -c %%F -o %TMP%\%%~nF.o
+
+            if exist "%TMP%\%%~nF.o" (
+                echo %%~nxF
             ) else (
-                set EXE=%CXX% %CF% %INCLUDE% -D__ESP_FILE__='"%%~nF%%~xF"' -c %%F -o %TMP%\%%~nF.o
+                set CF=%CF% -D__ESP_FILE__=\"%%~nxF\" -c %%F -o %TMP%\%%~nF.o
+
+                if "%%~xF" == ".c" (set EXE=%CC% -std=gnu99 -Wno-old-style-declaration !CF!) else (set EXE=%XX% -std=gnu++11 !CF!)
+
+                :: 编译器错误时errorlevel也为0
+                !EXE! %INCLUDE% > %TMP%\error.txt 2>&1
+
+                :: 通过文件大小判断是否成功
+                for %%I in (%TMP%\error.txt) do (if %%~zI == 0 (echo %%~nxF) else (type %TMP%\error.txt && exit /b))
             )
-
-            echo %CC%  %CF% -D__ESP_FILE__='"%%~nF%%~xF"' -c %%F -o %TMP%\%%~nF.o
-
-            !EXE! > %TMP%\error.txt 2>&1
-
-            for %%I in (%TMP%\error.txt) do (set SIZE=%%~zI)
-
-            if !SIZE! == 0 (
-                echo %%~nF%%~xF
-            ) else (
-                type %TMP%\error.txt
-                exit /b -1
-            )
-       )
+        )
     )
 )
 
-echo %LD% %OBJ% %LF%
+::----------------------------------------------------------------------------------------------------------
+:: 链接文件
+
+::echo %LD% %OBJ% %LF%
 
 %LD% %OBJ% %LF% > %TMP%\error.txt 2>&1
 
-for %%I in (%TMP%\error.txt) do (set SIZE=%%~zI)
+:: 通过文件大小判断是否成功type %TMP%\error.txt &&
+for %%I in (%TMP%\error.txt) do (if %%~zI == 0 (echo seccess) else (exit /b))
 
-if !SIZE! == 0 (
-    echo success
+::----------------------------------------------------------------------------------------------------------
+:: 烧录文件
+
+if %TYPE% == BOOTLOADER (
+    %OUT%\esp_tool.exe bin -o=%OUT%\1.bootloader.bin -i=%TMP%\bootloader.elf -version=1
+    if "%2" == "rom" (%OUT%\esp_tool.exe rom -i=%OUT%\1.bootloader.bin -addr=0x0 -com=5)
 ) else (
-    type %TMP%\error.txt
-    exit /b -1
+    %OUT%\esp_tool.exe bin -o=%OUT%\4.app.bin -i=%TMP%\app.elf -version=3
+    if "%2" == "rom" (%OUT%\esp_tool.exe rom -i=%OUT%\4.app.bin -addr=0x8000 -com=5)
 )
-
-.\tmp\esp_tool.exe bin -o=tmp\app.bin -i=tmp\app.elf -version=1
-.\tmp\esp_tool.exe rom -i=tmp\app.bin -addr=0x0 -com=5
