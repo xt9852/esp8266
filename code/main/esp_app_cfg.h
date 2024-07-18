@@ -8,7 +8,7 @@
 
 #define _STR(s)                     #s
 #define STR(s)                      _STR(s)
-#define TAG                         __FILE__ ":" STR(__LINE__)
+#define TAG                         __ESP_FILE__ ":" STR(__LINE__)
 
 #define CONFIG_WIFI_KEY             "wifi"
 #define CONFIG_WIFI_TYPE            "type"
@@ -57,6 +57,8 @@ typedef struct _config_wifi
 typedef struct _config_mqtt
 {
     char broker[32];                ///< broker地址,mqtt://broker.emqx.io
+    char addr[32];                  ///< 服务器地址
+    uint port;                      ///< 服务器端口号
     char username[32];              ///< 用户名
     char password[32];              ///< 密码
     char clientid[64];              ///< 同一个用户名下可以有多个不同的client

@@ -177,6 +177,8 @@ int config_get_mqtt_data(const char *json, p_config_mqtt mqtt)
 
     strncpy(mqtt->broker, broker->valuestring, sizeof(mqtt->broker) - 1);
 
+    sscanf(mqtt->broker, "mqtt://%31[^:]:%d", mqtt->addr, &(mqtt->port));
+
     cJSON *username = cJSON_GetObjectItem(root, CONFIG_MQTT_USERNAME);
 
     if (NULL == username)
@@ -372,8 +374,11 @@ int config_get_nvs_data(const char *key)
         }
         else if (ESP_ERR_NVS_NOT_FOUND == err && strcmp(key, CONFIG_MQTT_KEY) == 0)
         {
-            t_config_mqtt mqtt = { "mqtt://broker.emqx.io:1883", "", "", "36825c95-9b21-81a5-7930-0239418a4587/esp8266",
-                                   2, { "36825c95-9b21-81a5-7930-0239418a4587/ota", "36825c95-9b21-81a5-7930-0239418a4587/msg" }, {} };
+            t_config_mqtt mqtt = { "mqtt://broker.emqx.io:1883", "broker.emqx.io", 1883,
+                                   "", "", "36825c95-9b21-81a5-7930-0239418a4587/esp8266",
+                                   2,
+                                   { "36825c95-9b21-81a5-7930-0239418a4587/ota", "36825c95-9b21-81a5-7930-0239418a4587/msg" },
+                                   {} };
             config_put_mqtt(&mqtt);
             err = nvs_get_str(g_nvs, key, NULL, &len);
         }

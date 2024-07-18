@@ -39,7 +39,14 @@
 </form>\
 <form action='/reboot'>\
   <input type='submit' value='reboot'/>\
-</form>"
+</form>\
+<p>%d</p>\
+<p>%s</p>\
+<p>%s</p>"
+
+extern char *g_msg0;  ///< 4G模块的mqtt通过AT指令发送来的消息
+extern char *g_msg1;
+extern int  g_msg_num;
 
 /**
  *\brief        配置页面,模板HTTP_PATH_PROC
@@ -57,27 +64,33 @@ int http_cfg_page(const char *arg, void *param, char *content, unsigned int *con
     p_config_http  http  = &(config->http);
     p_config_light light = &(config->light);
 
-    int len = sprintf(content, HTTP_CONFIG_HTML_BEG,
-                               wifi->ssid,
-                               wifi->password,
-                               (wifi->type == WIFI_TYPE_AP) ? "selected" : "",
-                               (wifi->type == WIFI_TYPE_STA) ? "selected" : "",
-                               mqtt->broker,
-                               mqtt->username,
-                               mqtt->password,
-                               mqtt->clientid);
+    int len = snprintf(content,
+                       *content_len,
+                       HTTP_CONFIG_HTML_BEG,
+                       wifi->ssid,
+                       wifi->password,
+                       (wifi->type == WIFI_TYPE_AP) ? "selected" : "",
+                       (wifi->type == WIFI_TYPE_STA) ? "selected" : "",
+                       mqtt->broker,
+                       mqtt->username,
+                       mqtt->password,
+                       mqtt->clientid);
 
     for (int i = 0; i < mqtt->topic_count; i++)
     {
-        len += sprintf(&content[len], HTTP_CONFIG_HTML_MID, mqtt->topic[i]);
+        len += snprintf(&content[len], *content_len - len, HTTP_CONFIG_HTML_MID, mqtt->topic[i]);
     }
 
-    len += sprintf(&content[len], HTTP_CONFIG_HTML_END,
-                                  http->port,
-                                  (light->on == LIGHT_ON) ? "selected" : "",
-                                  (light->on == LIGHT_OFF) ? "selected" : "",
-                                  (light->on == LIGHT_RUN) ? "selected" : ""
-                                  );
+    len += snprintf(&content[len],
+                    *content_len - len,
+                    HTTP_CONFIG_HTML_END,
+                    http->port,
+                    (light->on == LIGHT_ON) ? "selected" : "",
+                    (light->on == LIGHT_OFF) ? "selected" : "",
+                    (light->on == LIGHT_RUN) ? "selected" : "",
+                    g_msg_num,
+                    (NULL == g_msg0) ? "" : g_msg0,
+                    (NULL == g_msg1) ? "" : g_msg1);
 
     *content_len = len;
     return 200;

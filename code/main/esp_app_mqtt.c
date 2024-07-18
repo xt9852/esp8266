@@ -57,18 +57,17 @@ static void mqtt_event_handler(void *param, esp_event_base_t base, int32_t event
             ESP_LOGI(TAG, "MQTT_EVENT_DATA TOPIC=%.*s", event->topic_len, event->topic);
             ESP_LOGI(TAG, "MQTT_EVENT_DATA DATA=%.*s", event->data_len, event->data);
 
-            t_msg_head msg;
-            msg.len = event->data_len;
-            msg.data = (char*)malloc(event->data_len + 1);
-            msg.data[msg.len] = '\0';
-            memcpy(msg.data, event->data, event->data_len);
-
             BaseType_t ret = pdFALSE;
 
             for (int i = 0; i < g_conf->topic_count; i++)
             {
                 if (0 == strncmp(event->topic, g_conf->topic[i], event->topic_len))
                 {
+                    t_msg_head msg;
+                    msg.len = event->data_len;
+                    msg.data = (char*)malloc(event->data_len + 1);
+                    msg.data[msg.len] = '\0';
+                    memcpy(msg.data, event->data, event->data_len);
                     ret = xQueueSend(g_conf->queue[i], &msg, portMAX_DELAY);
                     break;
                 }
@@ -101,6 +100,12 @@ static void mqtt_event_handler(void *param, esp_event_base_t base, int32_t event
  */
 int mqtt_init(p_config_mqtt mqtt)
 {
+    if (NULL == mqtt)
+    {
+        ESP_LOGE(TAG, "mqtt is null");
+        return -1;
+    }
+
     g_conf = mqtt;
 
     for (int i = 0; i < mqtt->topic_count; i++)
@@ -120,7 +125,7 @@ int mqtt_init(p_config_mqtt mqtt)
     if (NULL == g_mqtt)
     {
         ESP_LOGE(TAG, "esp_mqtt_client_init fail");
-        return -1;
+        return -2;
     }
 
     esp_err_t err = esp_mqtt_client_register_event(g_mqtt, ESP_EVENT_ANY_ID, mqtt_event_handler, g_mqtt);
@@ -128,7 +133,7 @@ int mqtt_init(p_config_mqtt mqtt)
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "esp_mqtt_client_register_event error %s", esp_err_to_name(err));
-        return -2;
+        return -3;
     }
 
     err = esp_mqtt_client_start(g_mqtt);
@@ -136,7 +141,7 @@ int mqtt_init(p_config_mqtt mqtt)
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "esp_mqtt_client_start error %s", esp_err_to_name(err));
-        return -3;
+        return -4;
     }
 
     return 0;
